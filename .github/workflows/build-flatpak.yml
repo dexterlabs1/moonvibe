@@ -9,9 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
-      options: --privileged
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
@@ -19,10 +16,26 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 1
 
-      - name: Build Flatpak bundle
-        uses: flathub-infra/flatpak-github-actions/flatpak-builder@master
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Build Flatpak
+        run: |
+          flatpak-builder --user --install-deps-from=flathub --force-clean --disable-rofiles-fuse \
+            --repo=repo builddir packaging/flatpak/io.github.dexterlabs1.Moonvibe.json
+
+      - name: Create bundle
+        run: |
+          flatpak build-bundle repo moonvibe.flatpak io.github.dexterlabs1.Moonvibe
+          ls -lh moonvibe.flatpak
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@v6
         with:
-          bundle: moonvibe.flatpak
-          manifest-path: packaging/flatpak/io.github.dexterlabs1.Moonvibe.json
-          cache-key: flatpak-builder-${{ github.sha }}
-          upload-artifact: true
+          name: moonvibe-flatpak
+          path: moonvibe.flatpak
+          compression-level: 0
+          if-no-files-found: error

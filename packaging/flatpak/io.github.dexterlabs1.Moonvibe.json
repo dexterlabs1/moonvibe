@@ -224,7 +224,8 @@
 			"sources": [
 				{
 					"type": "dir",
-					"path": "../.."
+					"path": "../..",
+					"skip": [ ".git", "build" ]
 				}
 			]
 		}
