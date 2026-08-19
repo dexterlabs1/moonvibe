@@ -11,6 +11,7 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
 - [ ] Make repo public + tag v0.1.0 release with both artifacts
 
 ## P1 — Deck-first UI shell
+- [x] Dark theme shell v1 (v0.2.0): Theme singleton, wordmark top bar, footer controller-glyph hints, host status cards, app capsules with monogram placeholders + running badge, dark dialogs
 - [ ] New QML shell: home/library per mockups (hero row, capsule grid, footer glyph hints)
 - [ ] 100% controller-complete navigation (audit every dialog; single spatial-nav system)
 - [ ] Pairing wizard: discovery → OTP/PIN pad (no OS keyboard) → bandwidth probe → defaults

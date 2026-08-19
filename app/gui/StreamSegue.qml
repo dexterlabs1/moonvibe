@@ -7,6 +7,7 @@ import Session 1.0
 import SystemProperties 1.0
 
 Item {
+    property var navHints: []
     property Session session
     property string appName
     property string stageText : isResume ? qsTr("Resuming %1...").arg(appName) :

@@ -5,6 +5,7 @@ import ComputerManager 1.0
 import Session 1.0
 
 Item {
+    property var navHints: []
     property string appName
     property var quitRunningAppFn
     property Session nextSession : null

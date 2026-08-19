@@ -9,6 +9,10 @@ import SdlGamepadKeyNavigation 1.0
 import SystemProperties 1.0
 
 Flickable {
+    property var navHints: [
+        { b: "A", t: qsTr("Change") },
+        { b: "B", t: qsTr("Back") }
+    ]
     id: settingsPage
     objectName: qsTr("Settings")
 

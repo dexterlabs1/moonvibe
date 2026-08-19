@@ -16,9 +16,15 @@ CenteredGridView {
     id: appGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 20
+    topMargin: 24
     bottomMargin: 5
-    cellWidth: 230; cellHeight: 297;
+    cellWidth: 230; cellHeight: 307;
+
+    property var navHints: [
+        { b: "A", t: qsTr("Play") },
+        { b: "X", t: qsTr("App options") },
+        { b: "B", t: qsTr("Back") }
+    ]
 
     function computerLost()
     {
@@ -71,7 +77,7 @@ CenteredGridView {
     model: appModel
 
     delegate: NavigableItemDelegate {
-        width: 220; height: 287;
+        width: 220; height: 297;
         grid: appGrid
 
         property alias appContextMenu: appContextMenuLoader.item
@@ -80,12 +86,20 @@ CenteredGridView {
         // Dim the app if it's hidden
         opacity: model.hidden ? 0.4 : 1.0
 
+        background: Rectangle {
+            radius: Theme.cardRadius
+            color: highlighted ? Theme.panelHi : Theme.panel
+            border.color: highlighted ? Theme.accent : Theme.line
+            border.width: highlighted ? 2 : 1
+        }
+
         Image {
             property bool isPlaceholder: false
 
             id: appIcon
             anchors.horizontalCenter: parent.horizontalCenter
             y: 10
+            visible: !isPlaceholder
             source: model.boxart
 
             onSourceSizeChanged: {
@@ -176,6 +190,7 @@ CenteredGridView {
             }
         }
 
+        // Monogram tile shown when the host serves no real box art
         Loader {
             id: appNameTextLoader
             active: appIcon.isPlaceholder
@@ -183,23 +198,78 @@ CenteredGridView {
             // This loader is not asynchronous to avoid noticeable differences
             // in the time in which the text loads for each game.
 
-            width: appIcon.width
-            height: model.running ? 175 : appIcon.height
+            anchors.fill: appIcon
 
-            anchors.left: appIcon.left
-            anchors.right: appIcon.right
-            anchors.bottom: appIcon.bottom
+            sourceComponent: Rectangle {
+                property bool truncated: nameLabel.truncated
 
-            sourceComponent: Label {
-                id: appNameText
-                text: model.name
-                font.pointSize: 22
-                leftPadding: 20
-                rightPadding: 20
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                elide: Text.ElideRight
+                radius: 8
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Theme.monogramTop(model.name) }
+                    GradientStop { position: 1.0; color: Theme.monogramBottom(model.name) }
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: -20
+                    text: Theme.initialsFor(model.name)
+                    color: Qt.rgba(1, 1, 1, 0.35)
+                    font.pointSize: 46
+                    font.bold: true
+                }
+
+                Label {
+                    id: nameLabel
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.margins: 12
+                    text: model.name
+                    color: Theme.textColor
+                    font.pointSize: 13
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 3
+                    elide: Text.ElideRight
+                }
+            }
+        }
+
+        // Running badge
+        Rectangle {
+            visible: model.running
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.topMargin: 16
+            anchors.leftMargin: 16
+            width: runningRow.width + 18
+            height: 24
+            radius: 12
+            color: "#D0080a10"
+            border.color: Theme.ok
+            border.width: 1
+
+            Row {
+                id: runningRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                Rectangle {
+                    width: 7
+                    height: 7
+                    radius: 3.5
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Theme.ok
+                }
+
+                Text {
+                    text: qsTr("RUNNING")
+                    color: Theme.ok
+                    font.pixelSize: 10
+                    font.bold: true
+                    font.letterSpacing: 1
+                }
             }
         }
 

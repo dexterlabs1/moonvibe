@@ -1,6 +1,9 @@
 <RCC>
     <qresource prefix="/">
         <file>gui/main.qml</file>
+        <file>gui/qmldir</file>
+        <file>gui/Theme.qml</file>
+        <file>gui/NavHint.qml</file>
         <file>gui/PcView.qml</file>
         <file>gui/AppView.qml</file>
         <file>gui/SettingsView.qml</file>

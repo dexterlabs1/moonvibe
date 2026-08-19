@@ -20,17 +20,26 @@ ApplicationWindow {
 
     id: window
     width: 1280
-    height: 600
+    height: 800
+    color: Theme.bg
+
+    Material.theme: Material.Dark
+    Material.accent: Theme.accent
+    Material.background: Theme.panel
+    Material.foreground: Theme.textColor
+
+
+    // Hints shown in the footer when the current view doesn't provide its own
+    property var defaultNavHints: [
+        { b: "A", t: qsTr("Select") },
+        { b: "B", t: qsTr("Back") },
+        { b: "Y", t: qsTr("Settings") }
+    ]
+    property var activeNavHints: stackView.currentItem && stackView.currentItem.navHints !== undefined
+                                 ? stackView.currentItem.navHints : defaultNavHints
 
     // This function runs prior to creation of the initial StackView item
     function doEarlyInit() {
-        // Override the background color to Material 2 colors for Qt 6.5+
-        // in order to improve contrast between GFE's placeholder box art
-        // and the background of the app grid.
-        if (SystemProperties.usesMaterial3Theme) {
-            Material.background = "#303030"
-        }
-
         SdlGamepadKeyNavigation.enable()
     }
 
@@ -236,15 +245,26 @@ ApplicationWindow {
     header: ToolBar {
         id: toolBar
         height: 60
-        anchors.topMargin: 5
-        anchors.bottomMargin: 5
+
+        background: Rectangle {
+            color: Theme.bgRaised
+
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: Theme.line
+            }
+        }
 
         Label {
             id: titleLabel
-            visible: toolBar.width > 700
+            visible: toolBar.width > 860
             anchors.fill: parent
             text: stackView.currentItem.objectName
-            font.pointSize: 20
+            color: Theme.textColor
+            font.pointSize: 16
+            font.bold: true
             elide: Label.ElideRight
             horizontalAlignment: Qt.AlignHCenter
             verticalAlignment: Qt.AlignVCenter
@@ -252,9 +272,25 @@ ApplicationWindow {
 
         RowLayout {
             spacing: 10
-            anchors.leftMargin: 10
+            anchors.leftMargin: 16
             anchors.rightMargin: 10
             anchors.fill: parent
+
+            Image {
+                source: "qrc:/res/io.github.dexterlabs1.Moonvibe.svg"
+                sourceSize.width: 30
+                sourceSize.height: 30
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Label {
+                text: "MOONVIBE"
+                color: Theme.textColor
+                font.pointSize: 13
+                font.bold: true
+                font.letterSpacing: 3
+                Layout.alignment: Qt.AlignVCenter
+            }
 
             NavigableToolButton {
                 // Only make the button visible if the user has navigated somewhere.
@@ -443,6 +479,44 @@ ApplicationWindow {
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Settings") + (settingsShortcut.nativeText ? (" ("+settingsShortcut.nativeText+")") : "")
             }
+        }
+    }
+
+    footer: Rectangle {
+        height: activeNavHints.length > 0 ? 46 : 0
+        visible: height > 0
+        color: Theme.bgRaised
+
+        Rectangle {
+            anchors.top: parent.top
+            width: parent.width
+            height: 1
+            color: Theme.line
+        }
+
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.left: parent.left
+            anchors.leftMargin: 24
+            spacing: 26
+
+            Repeater {
+                model: activeNavHints
+                delegate: NavHint {
+                    glyph: modelData.b
+                    label: modelData.t
+                }
+            }
+        }
+
+        Label {
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.right: parent.right
+            anchors.rightMargin: 24
+            text: qsTr("Moonvibe %1").arg(SystemProperties.versionString)
+            color: Theme.textFaint
+            font.pointSize: 10
+            font.bold: true
         }
     }
 

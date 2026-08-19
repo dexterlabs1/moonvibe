@@ -15,10 +15,17 @@ CenteredGridView {
     id: pcGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 20
+    topMargin: 24
     bottomMargin: 5
-    cellWidth: 310; cellHeight: 330;
-    objectName: qsTr("Computers")
+    cellWidth: 330; cellHeight: 172;
+    objectName: qsTr("Hosts")
+
+    property var navHints: [
+        { b: "A", t: qsTr("Connect") },
+        { b: "X", t: qsTr("Options") },
+        { b: "Y", t: qsTr("Settings") },
+        { b: "B", t: qsTr("Quit") }
+    ]
 
     Component.onCompleted: {
         // Don't show any highlighted item until interacting with them.
@@ -82,24 +89,37 @@ CenteredGridView {
         return model
     }
 
-    Row {
+    Column {
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 18
         visible: pcGrid.count === 0
 
         BusyIndicator {
             id: searchSpinner
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 42
+            height: 42
             visible: StreamingPreferences.enableMdns
             running: visible
         }
 
         Label {
-            height: searchSpinner.height
-            elide: Label.ElideRight
-            text: StreamingPreferences.enableMdns ? qsTr("Searching for compatible hosts on your local network...")
-                                                  : qsTr("Automatic PC discovery is disabled. Add your PC manually.")
-            font.pointSize: 20
-            verticalAlignment: Text.AlignVCenter
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: StreamingPreferences.enableMdns ? qsTr("Looking for hosts on your network…")
+                                                  : qsTr("Automatic discovery is disabled. Add your host manually.")
+            color: Theme.textMuted
+            font.pointSize: 14
+            font.bold: true
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+        }
+
+        Label {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: qsTr("Make sure Sunshine, Apollo, or Vibepollo is running on your PC")
+            color: Theme.textFaint
+            font.pointSize: 11
+            horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
         }
     }
@@ -107,57 +127,68 @@ CenteredGridView {
     model: computerModel
 
     delegate: NavigableItemDelegate {
-        width: 300; height: 320;
+        width: 310; height: 152;
         grid: pcGrid
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
-        Image {
-            id: pcIcon
-            anchors.horizontalCenter: parent.horizontalCenter
-            source: "qrc:/res/desktop_windows-48px.svg"
-            sourceSize {
-                width: 200
-                height: 200
+        background: Rectangle {
+            radius: Theme.cardRadius
+            color: highlighted ? Theme.panelHi : Theme.panel
+            border.color: highlighted ? Theme.accent : Theme.line
+            border.width: highlighted ? 2 : 1
+        }
+
+        Column {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 20
+            anchors.rightMargin: 20
+            spacing: 8
+
+            Row {
+                spacing: 10
+
+                Rectangle {
+                    width: 10
+                    height: 10
+                    radius: 5
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: model.statusUnknown ? Theme.textFaint
+                         : !model.online ? Theme.textFaint
+                         : !model.paired ? Theme.warn
+                         : Theme.ok
+                }
+
+                Label {
+                    text: model.name
+                    color: Theme.textColor
+                    font.pointSize: 17
+                    font.bold: true
+                    width: 220
+                    elide: Text.ElideRight
+                }
+
+                BusyIndicator {
+                    width: 22
+                    height: 22
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: model.statusUnknown
+                    running: visible
+                }
             }
-        }
 
-        Image {
-            // TODO: Tooltip
-            id: stateIcon
-            anchors.horizontalCenter: pcIcon.horizontalCenter
-            anchors.verticalCenter: pcIcon.verticalCenter
-            anchors.verticalCenterOffset: !model.online ? -18 : -16
-            visible: !model.statusUnknown && (!model.online || !model.paired)
-            source: !model.online ? "qrc:/res/warning_FILL1_wght300_GRAD200_opsz24.svg" : "qrc:/res/baseline-lock-24px.svg"
-            sourceSize {
-                width: !model.online ? 75 : 70
-                height: !model.online ? 75 : 70
+            Label {
+                text: model.statusUnknown ? qsTr("Connecting…")
+                    : !model.online ? (model.wakeable ? qsTr("Offline — press X to wake") : qsTr("Offline"))
+                    : !model.paired ? qsTr("Online — select to pair")
+                    : qsTr("Online · Paired")
+                color: model.online && model.paired ? Theme.textMuted
+                     : model.online ? Theme.warn : Theme.textFaint
+                font.pointSize: 11
+                font.bold: true
             }
-        }
-
-        BusyIndicator {
-            id: statusUnknownSpinner
-            anchors.horizontalCenter: pcIcon.horizontalCenter
-            anchors.verticalCenter: pcIcon.verticalCenter
-            anchors.verticalCenterOffset: -15
-            width: 75
-            height: 75
-            visible: model.statusUnknown
-            running: visible
-        }
-
-        Label {
-            id: pcNameText
-            text: model.name
-
-            width: parent.width
-            anchors.top: pcIcon.bottom
-            anchors.bottom: parent.bottom
-            font.pointSize: 36
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.Wrap
-            elide: Text.ElideRight
         }
 
         Loader {
