@@ -37,6 +37,45 @@ Gotchas: relaunch the app after every relink (a stale instance shows old QML —
 check `ps -o lstart` if the UI looks wrong); wipe the QML_DISK_CACHE_PATH dir;
 never `pkill -f` a pattern that matches your own shell command line.
 
+## Local build (WSL2 on the Windows dev PC) — verified 2026-08-19
+
+Development moved off the cloud sandbox onto Dexter's PC (Ryzen 9 9950X3D,
+125 GB RAM, RTX 5090). Builds run in **WSL2 Ubuntu 26.04**, not on Windows and
+not in CI. Full `make -j32 release` = **54 s**.
+
+```bash
+# one-time: build deps (see the apt list above) inside the Ubuntu distro
+mkdir -p ~/build/moonvibe && cd ~/build/moonvibe
+qmake6 /mnt/c/Users/Dexbr/OneDrive/Documents/Projects/moonvibe/moonlight-qt.pro
+make -j$(nproc) release          # binary at ~/build/moonvibe/app/moonvibe
+```
+
+- **Shadow-build into `~/…` on ext4, never into the source tree.** The repo
+  lives under OneDrive; build output there causes sync churn and the
+  dehydration trap (files list fine but read back as "cannot be found").
+- Source is read over `/mnt/c` (9p), which caps the build at ~640 % CPU of a
+  possible 3200 %. Fine for iteration. For anything heavier, `rsync -a
+  --exclude .git --exclude build` the tree to `~/src/moonvibe` first — the
+  working tree is only ~9 MB, so the sync is seconds.
+- **Force X11 for the Xvfb harness or the screenshot comes back blank**: WSLg
+  exports a Wayland display and the app takes it in preference to `:99`.
+  `env -u WAYLAND_DISPLAY DISPLAY=:99 QT_QPA_PLATFORM=xcb SDL_VIDEODRIVER=x11 ./moonvibe`
+- **Hardware decode works in WSL** — `/dev/dxg` is exposed, FFmpeg selects
+  `hevc_cuvid` on the RTX 5090. The "no hardware decoder" dialog that the cloud
+  container always raised does NOT appear here, so don't write test steps that
+  assume it.
+- **The dev PC is also the Vibepollo host**, so the client can be built and
+  tested against a real host in one place. Vibepollo answers on the WSL gateway
+  (`172.17.80.1:47989`), reporting `VirtualDisplayDriverReady` and
+  `SUNSHINE_SERVER_FREE`.
+- **Discovery stalls at "Connecting…" under default WSL networking**: the host
+  name resolves to a public IPv6 address that WSL2's NAT cannot route. Fix with
+  `%USERPROFILE%\.wslconfig` → `[wsl2]` / `networkingMode=mirrored` (needs
+  `wsl --shutdown`), or add the host by its gateway IP.
+- Flatpak/AppImage artifacts for the Deck can also be built locally —
+  `flatpak-builder` needs `flatpak flatpak-builder elfutils` (see the CI note
+  about `eu-strip`).
+
 ## QML architecture (added by Moonvibe)
 
 - `app/gui/Theme.qml` — singleton design tokens (registered via `app/gui/qmldir`;
@@ -76,19 +115,29 @@ never `pkill -f` a pattern that matches your own shell command line.
 
 ## CI / release runbook (GitHub, via MCP tools)
 
-- **Pushes through this environment's git proxy do NOT trigger `on: push`
-  workflows.** Always dispatch manually:
-  `actions_run_trigger run_workflow release.yml ref=main inputs={"version":"X.Y.Z"}`.
-- **Tag pushes 403 through the proxy.** The Release workflow creates the tag
-  server-side (softprops/action-gh-release) — never `git push origin --tags`.
+- **From the Windows dev PC, normal `git push` DOES trigger `on: push`
+  workflows** and the `gh` CLI is authenticated (`gh run list/view --log-failed`,
+  `gh workflow run`). The old warnings below applied only to the cloud
+  sandbox's git proxy — do not carry them over blindly:
+  - ~~pushes do not trigger `on: push`~~ — contradicted by two push-triggered
+    Build runs on 2026-08-19.
+  - the tag-push 403 may still have been real; the Release workflow creates the
+    tag server-side (softprops/action-gh-release) regardless, so there is still
+    no reason to `git push origin --tags`.
+- Manual dispatch is still the way to cut a release:
+  `gh workflow run release.yml --ref main -f version=X.Y.Z`.
 - Release workflow = build-appimage (~21–26 min) + build-flatpak (~25–45 min)
   + release job publishing both assets with Deck install instructions.
 - Babysit runs with `actions_list`/`get_job_logs` (`tail_lines: 120` — the real
   error sits above post-job cleanup noise). In-progress job logs 404. Job step
   lists update live; a step frozen >30 min on something that took seconds
   before = hung runner → cancel, re-dispatch (timeouts now fail these fast).
-- Releases: v0.1.0 (stock+rebrand), v0.2.0 (dark shell). Verified on the
-  user's Deck at v0.1.0: pairing, streaming, Gaming Mode all work.
+- Releases: **v0.1.0 only** (stock+rebrand). Verified on the user's Deck at
+  v0.1.0: pairing, streaming, Gaming Mode all work. **v0.2.0 (dark shell) is
+  built but NOT released** — every Release run since has failed in the Flatpak
+  job, and the `release` job `needs:` both artifacts, so no tag is ever cut.
+  Root cause: `--no-install-recommends` dropped `elfutils`, so flatpak-builder
+  could not find `eu-strip` and died at the libplacebo module.
 
 ## Things that will bite you
 

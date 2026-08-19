@@ -25,8 +25,12 @@ jobs:
         run: |
           sudo -E apt-get update
           # --no-install-recommends: the recommends set pulls ~123 packages
-          # (99 MB incl. ffmpeg) and has blown the step timeout on slow mirrors
-          sudo -E apt-get install -y --no-install-recommends -o Dpkg::Lock::Timeout=300 flatpak flatpak-builder
+          # (99 MB incl. ffmpeg) and has blown the step timeout on slow mirrors.
+          # elfutils must be named explicitly: it is only a *recommends* of
+          # flatpak-builder, but it provides eu-strip, which flatpak-builder
+          # shells out to when stripping debuginfo. Without it every build dies
+          # at the first module it tries to strip (libplacebo).
+          sudo -E apt-get install -y --no-install-recommends -o Dpkg::Lock::Timeout=300 flatpak flatpak-builder elfutils
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
       - name: Build Flatpak
