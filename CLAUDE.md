@@ -72,6 +72,14 @@ make -j$(nproc) release          # binary at ~/build/moonvibe/app/moonvibe
   name resolves to a public IPv6 address that WSL2's NAT cannot route. Fix with
   `%USERPROFILE%\.wslconfig` → `[wsl2]` / `networkingMode=mirrored` (needs
   `wsl --shutdown`), or add the host by its gateway IP.
+- **Bumping `app/version.txt` does not rebuild anything.** `VERSION_STR` is
+  baked in at qmake time from `$$cat(version.txt)`, but the generated Makefile
+  does not list `version.txt` as a dependency, so an incremental `make` keeps
+  the old string and the UI reports the previous version. Same trap for any
+  `DEFINES` change: editing a `-D` does not invalidate already-compiled objects.
+  After a version bump, delete `app/Makefile*` in the build dir, re-run qmake6,
+  and touch `app/backend/systemproperties.cpp`. Flatpak/AppImage builds are
+  clean builds, so releases were never wrong -- only local incremental ones.
 - Flatpak/AppImage artifacts for the Deck can also be built locally —
   `flatpak-builder` needs `flatpak flatpak-builder elfutils` (see the CI note
   about `eu-strip`).
