@@ -11,14 +11,30 @@ QtObject {
     readonly property color lineHi: "#2a2e45"
     readonly property color textColor: "#eceef8"
     readonly property color textMuted: "#8b91ad"
-    readonly property color textFaint: "#6b7190"
+    readonly property color textFaint: "#4b5069"
     readonly property color accent: "#8fa6ff"
     readonly property color accentDeep: "#5f79e8"
     readonly property color ok: "#5bd58c"
     readonly property color warn: "#f0b35c"
     readonly property color danger: "#ef7373"
 
+    // Pill and chip surfaces from the mockups
+    readonly property color pill: "#171a29"
+    readonly property color glyphBg: "#262b40"
+    readonly property color topGlow: "#171a2c"
+
+    // Bundled typefaces, registered in main.cpp before QML loads.
+    // Manrope carries the UI text; Space Grotesk is the display face used for
+    // app titles and the wordmark, always uppercase with wide tracking.
+    readonly property string fontBody: "Manrope"
+    readonly property string fontDisplay: "Space Grotesk"
+
     readonly property int cardRadius: 12
+    readonly property int capsuleRadius: 10
+
+    // Library capsule geometry: 2:3, the Steam capsule aspect.
+    readonly property int capsuleWidth: 152
+    readonly property int capsuleHeight: 224
 
     // Deterministic hue per app name for monogram placeholder tiles
     function hueFor(name) {

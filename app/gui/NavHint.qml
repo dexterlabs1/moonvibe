@@ -11,15 +11,16 @@ Row {
         width: 22
         height: 22
         radius: 11
-        color: Theme.lineHi
+        color: Theme.glyphBg
         anchors.verticalCenter: parent.verticalCenter
 
         Text {
             anchors.centerIn: parent
             text: glyph
             color: Theme.textColor
+            font.family: Theme.fontBody
             font.pixelSize: 12
-            font.bold: true
+            font.weight: Font.ExtraBold
         }
     }
 
@@ -27,7 +28,8 @@ Row {
         anchors.verticalCenter: parent.verticalCenter
         text: label
         color: Theme.textMuted
+        font.family: Theme.fontBody
         font.pixelSize: 13
-        font.bold: true
+        font.weight: Font.DemiBold
     }
 }

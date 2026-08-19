@@ -1,4 +1,5 @@
 #include <QGuiApplication>
+#include <QFontDatabase>
 #include <QStyleHints>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -754,6 +755,22 @@ int main(int argc, char *argv[])
     }
 
     QGuiApplication app(argc, argv);
+
+    // Register the bundled UI typefaces before any QML loads. Doing this in C++
+    // rather than with QML FontLoader keeps it independent of the FontLoader API
+    // changes across Qt versions, and guarantees the families exist by the time
+    // the first component is instantiated.
+    for (const QString& fontPath : {
+         QStringLiteral(":/fonts/Manrope-Regular.ttf"),
+         QStringLiteral(":/fonts/Manrope-SemiBold.ttf"),
+         QStringLiteral(":/fonts/Manrope-Bold.ttf"),
+         QStringLiteral(":/fonts/Manrope-ExtraBold.ttf"),
+         QStringLiteral(":/fonts/SpaceGrotesk-Medium.ttf"),
+         QStringLiteral(":/fonts/SpaceGrotesk-Bold.ttf")}) {
+        if (QFontDatabase::addApplicationFont(fontPath) < 0) {
+            qWarning() << "Failed to load bundled font" << fontPath;
+        }
+    }
 
 #ifdef Q_OS_DARWIN
     // macOS defaults "Keyboard navigation" to text fields and lists only, which

@@ -455,6 +455,7 @@ wayland {
 
 RESOURCES += \
     resources.qrc \
+    fonts.qrc \
     qml.qrc
 
 TRANSLATIONS += \

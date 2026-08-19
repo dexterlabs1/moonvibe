@@ -5,10 +5,11 @@ import QtQuick.Layouts 1.3
 
 import AppModel 1.0
 import ComputerManager 1.0
+import StreamingPreferences 1.0
 import SdlGamepadKeyNavigation 1.0
 
-// The library: a "Continue" hero row of recently played apps above the full
-// capsule grid. See docs/PRODUCT.md 3.2 screen 1.
+// The library: a "Continue" hero row of recently played apps above the capsule
+// grid. Geometry, type and section headers follow the home/library mockup.
 FocusScope {
     property int computerIndex
     property AppModel appModel : createModel()
@@ -43,7 +44,7 @@ FocusScope {
 
     function refreshRecents()
     {
-        root.recentApps = appModel.getRecentApps(6)
+        root.recentApps = appModel.getRecentApps(3)
     }
 
     // Shared by the hero row and the capsule grid so both behave identically
@@ -74,8 +75,6 @@ FocusScope {
 
     Component.onCompleted: {
         // Don't show any highlighted item until interacting with them.
-        // We do this here instead of onActivated to avoid losing the user's
-        // selection when backing out of a different page of the app.
         appGrid.currentIndex = -1
         refreshRecents()
     }
@@ -85,20 +84,15 @@ FocusScope {
         activated = true
         refreshRecents()
 
-        // Highlight the first item if a gamepad is connected
         if (appGrid.currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
             appGrid.currentIndex = 0
         }
 
         if (!showGames && !showHiddenGames) {
-            // Check if there's a direct launch app
             var directLaunchAppIndex = appModel.getDirectLaunchAppIndex();
             if (directLaunchAppIndex >= 0) {
-                // Start the direct launch app if nothing else is running
                 appGrid.currentIndex = directLaunchAppIndex
                 appGrid.currentItem.launchOrResumeSelectedApp(false)
-
-                // Set showGames so we will not loop when the stream ends
                 showGames = true
             }
         }
@@ -123,29 +117,31 @@ FocusScope {
         anchors.fill: parent
         spacing: 0
 
+        // ---- Continue ----
         ColumnLayout {
             id: heroSection
 
             visible: root.recentApps.length > 0
             Layout.fillWidth: true
-            Layout.leftMargin: 24
-            Layout.rightMargin: 24
-            Layout.topMargin: 18
+            Layout.leftMargin: 28
+            Layout.rightMargin: 28
+            Layout.topMargin: 6
             spacing: 10
 
             Text {
-                text: qsTr("Continue")
-                color: Theme.textColor
-                font.pixelSize: 15
-                font.bold: true
-                font.letterSpacing: 2
+                text: qsTr("CONTINUE")
+                color: Theme.textMuted
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                font.weight: Font.ExtraBold
+                font.letterSpacing: 1.9
             }
 
             ListView {
                 id: heroRow
 
                 Layout.fillWidth: true
-                Layout.preferredHeight: 166
+                Layout.preferredHeight: 206
                 orientation: ListView.Horizontal
                 spacing: 16
                 clip: true
@@ -184,16 +180,58 @@ FocusScope {
                     }
                 }
 
-                Keys.onReturnPressed: {
-                    if (currentItem) {
-                        currentItem.activated()
-                    }
-                }
+                Keys.onReturnPressed: { if (currentItem) currentItem.activated() }
+                Keys.onEnterPressed: { if (currentItem) currentItem.activated() }
+            }
+        }
 
-                Keys.onEnterPressed: {
-                    if (currentItem) {
-                        currentItem.activated()
-                    }
+        // ---- All games ----
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 28
+            Layout.rightMargin: 28
+            Layout.topMargin: 18
+            Layout.bottomMargin: 10
+            spacing: 12
+
+            Text {
+                text: qsTr("ALL GAMES")
+                color: Theme.textMuted
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                font.weight: Font.ExtraBold
+                font.letterSpacing: 1.9
+            }
+
+            Text {
+                text: appGrid.count
+                color: Theme.textFaint
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                font.weight: Font.Bold
+            }
+
+            Item { Layout.fillWidth: true }
+
+            // Where the artwork is coming from. Quietly answers "why does this
+            // look different from Steam" without a settings trip.
+            Rectangle {
+                visible: StreamingPreferences.steamGridDbApiKey !== ""
+                implicitHeight: 24
+                implicitWidth: artChipText.width + 20
+                radius: 12
+                color: Theme.bgRaised
+                border.color: Theme.lineHi
+                border.width: 1
+
+                Text {
+                    id: artChipText
+                    anchors.centerIn: parent
+                    text: qsTr("Art: SteamGridDB")
+                    color: "#b8bdd4"
+                    font.family: Theme.fontBody
+                    font.pixelSize: 12
+                    font.weight: Font.Bold
                 }
             }
         }
@@ -203,21 +241,23 @@ FocusScope {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.leftMargin: 28 - minMargin
+            Layout.rightMargin: 28 - minMargin
 
             focus: true
             activeFocusOnTab: true
-            topMargin: 24
-            bottomMargin: 5
-            cellWidth: 230; cellHeight: 307;
+            topMargin: 0
+            bottomMargin: 8
+            // capsule + the mockup's 16px gutter
+            cellWidth: Theme.capsuleWidth + 16
+            cellHeight: Theme.capsuleHeight + 16
             model: appModel
 
             // Leaving the top row of the grid goes up into the Continue row
             // rather than dead-ending, which is the whole point of having it.
             Keys.onUpPressed: {
                 // currentIndex is -1 until something is selected (no gamepad
-                // attached), and that state has to reach the hero row too --
-                // requiring >= 0 here made Up a no-op on a freshly opened
-                // library, which is exactly when it is most likely pressed.
+                // attached), and that state has to reach the hero row too.
                 if (heroSection.visible && currentIndex < itemsPerRow) {
                     if (heroRow.currentIndex < 0) {
                         heroRow.currentIndex = 0
@@ -231,200 +271,202 @@ FocusScope {
             }
 
             delegate: NavigableItemDelegate {
-                width: 220; height: 297;
+                id: capsule
+
+                width: Theme.capsuleWidth
+                height: Theme.capsuleHeight
+                padding: 0
                 grid: appGrid
 
                 property alias appContextMenu: appContextMenuLoader.item
-                property alias appNameText: appNameTextLoader.item
 
                 // Dim the app if it's hidden
                 opacity: model.hidden ? 0.4 : 1.0
 
-                background: Rectangle {
-                    radius: Theme.cardRadius
-                    color: highlighted ? Theme.panelHi : Theme.panel
-                    border.color: highlighted ? Theme.accent : Theme.line
-                    border.width: highlighted ? 2 : 1
+                // No card chrome: in the mockup the artwork *is* the tile.
+                background: Item {}
+
+                // Focus glow, matching the hero cards.
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -5
+                    radius: Theme.capsuleRadius + 5
+                    color: "transparent"
+                    border.color: Theme.accent
+                    border.width: 5
+                    opacity: capsule.highlighted ? 0.18 : 0
+                    Behavior on opacity { NumberAnimation { duration: 110 } }
                 }
 
-                Image {
-                    property bool isPlaceholder: false
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Theme.capsuleRadius
+                    color: Theme.pill
+                    border.color: capsule.highlighted ? Theme.accent : Theme.line
+                    border.width: capsule.highlighted ? 2 : 1
+                    clip: true
 
-                    id: appIcon
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: 10
-                    visible: !isPlaceholder
-                    source: model.boxart
+                    Image {
+                        property bool isPlaceholder: false
 
-                    onSourceSizeChanged: {
-                        // Nearly all of Nvidia's official box art does not match the dimensions of placeholder
-                        // images, however the one known exception is Overcooked. Therefore, we only execute
-                        // the image size checks if this is not an app collector game. We know the officially
-                        // supported games all have box art, so this check is not required.
-                        if (!model.isAppCollectorGame &&
-                            ((sourceSize.width === 130 && sourceSize.height === 180) || // GFE 2.0 placeholder image
-                             (sourceSize.width === 628 && sourceSize.height === 888) || // GFE 3.0 placeholder image
-                             (sourceSize.width === 200 && sourceSize.height === 266)))  // Our no_app_image.png
-                        {
-                            isPlaceholder = true
+                        id: appIcon
+                        anchors.fill: parent
+                        anchors.margins: 1
+                        visible: !isPlaceholder && status === Image.Ready
+                        source: model.boxart
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+
+                        onSourceSizeChanged: {
+                            // Nearly all of Nvidia's official box art does not match the dimensions of
+                            // placeholder images, however the one known exception is Overcooked. So the
+                            // size checks only run when this is not an app collector game.
+                            isPlaceholder = !model.isAppCollectorGame &&
+                                    ((sourceSize.width === 130 && sourceSize.height === 180) ||
+                                     (sourceSize.width === 628 && sourceSize.height === 888) ||
+                                     (sourceSize.width === 200 && sourceSize.height === 266))
                         }
-                        else
-                        {
-                            isPlaceholder = false
-                        }
-
-                        width = 200
-                        height = 267
                     }
 
-                    // Display a tooltip with the full name if it's truncated
-                    ToolTip.text: model.name
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: (parent.hovered || parent.highlighted) && (!appNameText || appNameText.truncated)
-                }
-
-                Loader {
-                    active: model.running
-                    asynchronous: true
-                    anchors.fill: appIcon
-
-                    sourceComponent: Item {
-                        RoundButton {
-                            // Don't steal focus from the toolbar buttons
-                            focusPolicy: Qt.NoFocus
-
-                            anchors.horizontalCenterOffset: appIcon.isPlaceholder ? -47 : 0
-                            anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : -60
-                            anchors.centerIn: parent
-                            implicitWidth: 85
-                            implicitHeight: 85
-
-                            icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
-                            icon.width: 75
-                            icon.height: 75
-
-                            onClicked: {
-                                launchOrResumeSelectedApp(true)
-                            }
-
-                            ToolTip.text: qsTr("Resume Game")
-                            ToolTip.delay: 1000
-                            ToolTip.timeout: 3000
-                            ToolTip.visible: hovered
-
-                            Material.background: "#D0808080"
-                        }
-
-                        RoundButton {
-                            // Don't steal focus from the toolbar buttons
-                            focusPolicy: Qt.NoFocus
-
-                            anchors.horizontalCenterOffset: appIcon.isPlaceholder ? 47 : 0
-                            anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : 60
-                            anchors.centerIn: parent
-                            implicitWidth: 85
-                            implicitHeight: 85
-
-                            icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
-                            icon.width: 75
-                            icon.height: 75
-
-                            onClicked: {
-                                doQuitGame()
-                            }
-
-                            ToolTip.text: qsTr("Quit Game")
-                            ToolTip.delay: 1000
-                            ToolTip.timeout: 3000
-                            ToolTip.visible: hovered
-
-                            Material.background: "#D0808080"
-                        }
-                    }
-                }
-
-                // Monogram tile shown when the host serves no real box art
-                Loader {
-                    id: appNameTextLoader
-                    active: appIcon.isPlaceholder
-
-                    // This loader is not asynchronous to avoid noticeable differences
-                    // in the time in which the text loads for each game.
-
-                    anchors.fill: appIcon
-
-                    sourceComponent: Rectangle {
-                        property bool truncated: nameLabel.truncated
-
-                        radius: 8
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: Theme.monogramTop(model.name) }
-                            GradientStop { position: 1.0; color: Theme.monogramBottom(model.name) }
-                        }
+                    // Monogram tile shown when the host serves no real box art
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 1
+                        visible: appIcon.isPlaceholder || appIcon.status !== Image.Ready
+                        color: Theme.pill
 
                         Text {
                             anchors.centerIn: parent
-                            anchors.verticalCenterOffset: -20
+                            anchors.verticalCenterOffset: -14
                             text: Theme.initialsFor(model.name)
-                            color: Qt.rgba(1, 1, 1, 0.35)
-                            font.pointSize: 46
-                            font.bold: true
+                            color: "#3a4060"
+                            font.family: Theme.fontDisplay
+                            font.pixelSize: 44
+                            font.weight: Font.Bold
+                        }
+                    }
+
+                    // Title strip over a scrim, so the name is legible on any art
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.margins: 1
+                        height: titleText.height + 18
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: "#00080a0e" }
+                            GradientStop { position: 1.0; color: "#EB080a0e" }
                         }
 
-                        Label {
-                            id: nameLabel
+                        Text {
+                            id: titleText
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
-                            anchors.margins: 12
-                            text: model.name
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            anchors.bottomMargin: 8
+                            text: model.name.toUpperCase()
                             color: Theme.textColor
-                            font.pointSize: 13
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            font.weight: Font.Bold
+                            font.letterSpacing: 0.25
                             wrapMode: Text.Wrap
-                            maximumLineCount: 3
+                            maximumLineCount: 2
                             elide: Text.ElideRight
+                        }
+                    }
+
+                    // Running badge
+                    Rectangle {
+                        visible: model.running
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.margins: 8
+                        width: runningRow.width + 16
+                        height: 22
+                        radius: 11
+                        color: "#B8080a10"
+                        border.color: Qt.rgba(0.36, 0.84, 0.55, 0.5)
+                        border.width: 1
+
+                        Row {
+                            id: runningRow
+                            anchors.centerIn: parent
+                            spacing: 5
+
+                            Rectangle {
+                                width: 6; height: 6; radius: 3
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: Theme.ok
+                            }
+
+                            Text {
+                                text: qsTr("RUNNING")
+                                color: "#7fe3a8"
+                                font.family: Theme.fontBody
+                                font.pixelSize: 9
+                                font.weight: Font.ExtraBold
+                                font.letterSpacing: 0.6
+                            }
+                        }
+                    }
+
+                    // Resume / quit controls for a running app
+                    Loader {
+                        active: model.running
+                        asynchronous: true
+                        anchors.centerIn: parent
+
+                        sourceComponent: Row {
+                            spacing: 10
+
+                            RoundButton {
+                                focusPolicy: Qt.NoFocus
+                                implicitWidth: 54
+                                implicitHeight: 54
+                                icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
+                                icon.width: 44
+                                icon.height: 44
+                                onClicked: capsule.launchOrResumeSelectedApp(true)
+                                Material.background: "#D0808080"
+
+                                ToolTip.text: qsTr("Resume Game")
+                                ToolTip.delay: 1000
+                                ToolTip.timeout: 3000
+                                ToolTip.visible: hovered
+                            }
+
+                            RoundButton {
+                                focusPolicy: Qt.NoFocus
+                                implicitWidth: 54
+                                implicitHeight: 54
+                                icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
+                                icon.width: 44
+                                icon.height: 44
+                                onClicked: capsule.doQuitGame()
+                                Material.background: "#D0808080"
+
+                                ToolTip.text: qsTr("Quit Game")
+                                ToolTip.delay: 1000
+                                ToolTip.timeout: 3000
+                                ToolTip.visible: hovered
+                            }
                         }
                     }
                 }
 
-                // Running badge
+                // Rectangle.clip is a bounding-box clip and does not round its
+                // children, so paint a ring in the page background colour over
+                // the corners. Inset so the focus border stays visible.
                 Rectangle {
-                    visible: model.running
-                    anchors.top: parent.top
-                    anchors.left: parent.left
-                    anchors.topMargin: 16
-                    anchors.leftMargin: 16
-                    width: runningRow.width + 18
-                    height: 24
-                    radius: 12
-                    color: "#D0080a10"
-                    border.color: Theme.ok
-                    border.width: 1
-
-                    Row {
-                        id: runningRow
-                        anchors.centerIn: parent
-                        spacing: 6
-
-                        Rectangle {
-                            width: 7
-                            height: 7
-                            radius: 3.5
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: Theme.ok
-                        }
-
-                        Text {
-                            text: qsTr("RUNNING")
-                            color: Theme.ok
-                            font.pixelSize: 10
-                            font.bold: true
-                            font.letterSpacing: 1
-                        }
-                    }
+                    anchors.fill: parent
+                    anchors.margins: capsule.highlighted ? 2 : 1
+                    radius: Theme.capsuleRadius
+                    color: "transparent"
+                    border.color: Theme.bg
+                    border.width: 3
                 }
 
                 function launchOrResumeSelectedApp(quitExistingApp)
@@ -432,23 +474,25 @@ FocusScope {
                     root.launchApp(index, model.name, model.appid, quitExistingApp)
                 }
 
+                function doQuitGame() {
+                    quitAppDialog.appName = appModel.getRunningAppName()
+                    quitAppDialog.segueToStream = false
+                    quitAppDialog.open()
+                }
+
                 onClicked: {
                     // Only allow clicking on the box art for non-running games.
-                    // For running games, buttons will appear to resume or quit which
-                    // will handle starting the game and clicks on the box art will
-                    // be ignored.
+                    // For running games the resume/quit buttons handle it.
                     if (!model.running) {
                         launchOrResumeSelectedApp(true)
                     }
                 }
 
                 onPressAndHold: {
-                    // popup() ensures the menu appears under the mouse cursor
                     if (appContextMenu.popup) {
                         appContextMenu.popup()
                     }
                     else {
-                        // Qt 5.9 doesn't have popup()
                         appContextMenu.open()
                     }
                 }
@@ -462,37 +506,26 @@ FocusScope {
                 }
 
                 Keys.onReturnPressed: {
-                    // Open the app context menu if activated via the gamepad or keyboard
-                    // for running games. If the game isn't running, the above onClicked
-                    // method will handle the launch.
+                    // For running games open the menu; otherwise onClicked launches.
                     if (model.running) {
-                        // This will be keyboard/gamepad driven so use
-                        // open() instead of popup()
                         appContextMenu.open()
                     }
                 }
 
                 Keys.onEnterPressed: {
-                    // Open the app context menu if activated via the gamepad or keyboard
-                    // for running games. If the game isn't running, the above onClicked
-                    // method will handle the launch.
                     if (model.running) {
-                        // This will be keyboard/gamepad driven so use
-                        // open() instead of popup()
                         appContextMenu.open()
                     }
                 }
 
                 Keys.onMenuPressed: {
-                    // This will be keyboard/gamepad driven so use open() instead of popup()
                     appContextMenu.open()
                 }
 
-                function doQuitGame() {
-                    quitAppDialog.appName = appModel.getRunningAppName()
-                    quitAppDialog.segueToStream = false
-                    quitAppDialog.open()
-                }
+                ToolTip.text: model.name
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: (hovered || highlighted) && titleText.truncated
 
                 Loader {
                     id: appContextMenuLoader
@@ -502,11 +535,11 @@ FocusScope {
                         initiator: appContextMenuLoader.parent
                         NavigableMenuItem {
                             text: model.running ? qsTr("Resume Game") : qsTr("Launch Game")
-                            onTriggered: launchOrResumeSelectedApp(true)
+                            onTriggered: capsule.launchOrResumeSelectedApp(true)
                         }
                         NavigableMenuItem {
                             text: qsTr("Quit Game")
-                            onTriggered: doQuitGame()
+                            onTriggered: capsule.doQuitGame()
                             visible: model.running
                         }
                         NavigableMenuItem {
@@ -567,8 +600,6 @@ FocusScope {
             var component = Qt.createComponent("QuitSegue.qml")
             var params = {"appName": appName, "quitRunningAppFn": function() { appModel.quitRunningApp() }}
             if (segueToStream) {
-                // Store the session and app name if we're going to stream after
-                // successfully quitting the old app.
                 params.nextAppName = nextAppName
                 params.nextSession = appModel.createSessionForApp(nextAppIndex)
             }

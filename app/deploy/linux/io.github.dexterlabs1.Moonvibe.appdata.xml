@@ -39,6 +39,16 @@
 	</branding>
 
 	<releases>
+		<release version="0.4.0" date="2026-08-19">
+			<description>
+				<p>The Deck-first interface, rebuilt to the design:</p>
+				<ul>
+					<li>Library artwork now fills the tile, with the title over a scrim</li>
+					<li>Top bar carries a host pill and a clock instead of a page title</li>
+					<li>Manrope and Space Grotesk bundled for the display type</li>
+				</ul>
+			</description>
+		</release>
 		<release version="0.3.0" date="2026-08-19">
 			<description>
 				<p>Library and pairing:</p>

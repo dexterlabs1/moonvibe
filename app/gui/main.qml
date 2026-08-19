@@ -244,7 +244,7 @@ ApplicationWindow {
 
     header: ToolBar {
         id: toolBar
-        height: 60
+        height: 62
 
         background: Rectangle {
             color: Theme.bgRaised
@@ -259,7 +259,9 @@ ApplicationWindow {
 
         Label {
             id: titleLabel
-            visible: toolBar.width > 860
+            // The mockups have no centred page title; the host pill below
+            // carries the context and the wordmark owns the left edge.
+            visible: false
             anchors.fill: parent
             text: stackView.currentItem.objectName
             color: Theme.textColor
@@ -286,10 +288,46 @@ ApplicationWindow {
             Label {
                 text: "MOONVIBE"
                 color: Theme.textColor
-                font.pointSize: 13
-                font.bold: true
-                font.letterSpacing: 3
+                font.family: Theme.fontDisplay
+                font.pixelSize: 17
+                font.weight: Font.Bold
+                font.letterSpacing: 2.4
                 Layout.alignment: Qt.AlignVCenter
+            }
+
+            // Host pill: which machine this view belongs to, and whether it is
+            // reachable. Only meaningful once you have navigated into a host.
+            Rectangle {
+                id: hostPill
+                visible: stackView.depth > 1 && stackView.currentItem instanceof AppView
+                Layout.alignment: Qt.AlignVCenter
+                implicitHeight: 30
+                implicitWidth: hostPillRow.width + 28
+                radius: 15
+                color: Theme.pill
+                border.color: Theme.lineHi
+                border.width: 1
+
+                Row {
+                    id: hostPillRow
+                    anchors.centerIn: parent
+                    spacing: 8
+
+                    Rectangle {
+                        width: 8; height: 8; radius: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: Theme.ok
+                    }
+
+                    Label {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: stackView.currentItem ? stackView.currentItem.objectName : ""
+                        color: Theme.textColor
+                        font.family: Theme.fontBody
+                        font.pixelSize: 13
+                        font.weight: Font.ExtraBold
+                    }
+                }
             }
 
             NavigableToolButton {
@@ -318,7 +356,7 @@ ApplicationWindow {
                 // We need this label to always be visible so it can occupy
                 // the remaining space in the RowLayout. To "hide" it, we
                 // just set the text to empty string.
-                text: !titleLabel.visible ? stackView.currentItem.objectName : ""
+                text: ""
             }
 
             Label {
@@ -478,6 +516,34 @@ ApplicationWindow {
                 ToolTip.timeout: 3000
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Settings") + (settingsShortcut.nativeText ? (" ("+settingsShortcut.nativeText+")") : "")
+            }
+
+            // Clock. On a handheld in Gaming Mode there is no system tray to
+            // glance at, so the time lives here.
+            Label {
+                id: clockLabel
+
+                function refresh() {
+                    text = Qt.formatTime(new Date(), "HH:mm")
+                }
+
+                Layout.alignment: Qt.AlignVCenter
+                Layout.leftMargin: 4
+                color: Theme.textMuted
+                font.family: Theme.fontBody
+                font.pixelSize: 14
+                font.weight: Font.Bold
+
+                Component.onCompleted: refresh()
+
+                Timer {
+                    // Cheap enough to tick every 15s; the display only has
+                    // minute resolution so this is never visibly stale.
+                    interval: 15000
+                    running: true
+                    repeat: true
+                    onTriggered: clockLabel.refresh()
+                }
             }
         }
     }
