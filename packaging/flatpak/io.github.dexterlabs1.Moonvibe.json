@@ -110,14 +110,8 @@
 		},
 		{
 			"name": "SDL2_ttf",
-			"buildsystem": "cmake-ninja",
-			"builddir": true,
-			"build-options": {
-				"config-opts": [
-					"-DSDL2TTF_VENDORED=ON",
-					"-DSDL2TTF_SAMPLES=OFF"
-				]
-			},
+			"buildsystem": "autotools",
+			"//": "autotools installs SDL2_ttf.pc, which the qmake PKGCONFIG check needs; the cmake build does not",
 			"sources": [
 				{
 					"type": "git",
