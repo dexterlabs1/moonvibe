@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Moonvibe
+Comment=Deck-first game streaming client for Sunshine, Apollo, and Vibepollo hosts
+Exec=moonvibe
+Icon=io.github.dexterlabs1.Moonvibe
+Terminal=false
+Type=Application
+Categories=Qt;Game;Network;RemoteAccess;
+Keywords=moonlight;gamestream;stream;sunshine;apollo;vibepollo;remote play;steam deck;

@@ -1,0 +1,28 @@
+---
+name: Build - Flatpak
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      options: --privileged
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Build Flatpak bundle
+        uses: flathub-infra/flatpak-github-actions/flatpak-builder@master
+        with:
+          bundle: moonvibe.flatpak
+          manifest-path: packaging/flatpak/io.github.dexterlabs1.Moonvibe.json
+          cache-key: flatpak-builder-${{ github.sha }}
+          upload-artifact: true

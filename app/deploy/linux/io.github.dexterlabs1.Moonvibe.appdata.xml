@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+	<id>io.github.dexterlabs1.Moonvibe</id>
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>GPL-3.0+</project_license>
+	<name>Moonvibe</name>
+	<summary>Deck-first game streaming client for Sunshine, Apollo, and Vibepollo hosts</summary>
+
+	<description>
+		<p>Moonvibe is a Steam Deck-focused fork of Moonlight that streams games and other applications from another PC running Sunshine, Apollo, or Vibepollo.</p>
+		<p>Features include:</p>
+		<ul>
+			<li>Hardware accelerated video decoding with VAAPI, VDPAU, and Vulkan Video support</li>
+			<li>H.264, HEVC, and AV1 codec support, including HDR on the Steam Deck OLED</li>
+			<li>7.1 surround sound audio support</li>
+			<li>10-point multitouch support</li>
+			<li>Gamepad support with force feedback for up to 16 players</li>
+			<li>Support for both pointer capture (for games) and direct mouse control (for remote desktop)</li>
+			<li>Support for passing system-wide keyboard shortcuts like Alt+Tab to the host</li>
+		</ul>
+	</description>
+
+	<url type="homepage">https://github.com/dexterlabs1/moonvibe</url>
+	<url type="bugtracker">https://github.com/dexterlabs1/moonvibe/issues</url>
+	<url type="help">https://github.com/dexterlabs1/moonvibe#readme</url>
+	<url type="vcs-browser">https://github.com/dexterlabs1/moonvibe</url>
+	<developer id="io.github.dexterlabs1">
+		<name>Moonvibe Project</name>
+	</developer>
+	<launchable type="desktop-id">io.github.dexterlabs1.Moonvibe.desktop</launchable>
+	<provides>
+		<binary>moonvibe</binary>
+	</provides>
+	<content_rating type="oars-1.1" />
+
+	<branding>
+		<color type="primary" scheme_preference="light">#5f79e8</color>
+		<color type="primary" scheme_preference="dark">#171a2c</color>
+	</branding>
+
+	<releases>
+		<release version="0.1.0" date="2026-08-19">
+			<description>
+				<p>Initial Moonvibe fork of moonlight-qt master:</p>
+				<ul>
+					<li>Rebranded application identity and packaging</li>
+					<li>Steam Deck-focused Flatpak packaging with gamescope HDR support</li>
+				</ul>
+			</description>
+		</release>
+	</releases>
+</component>

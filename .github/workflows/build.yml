@@ -7,7 +7,7 @@ on:
   push:
   pull_request:
     branches:
-      - master
+      - main
 
 concurrency:
   group: build-${{ github.ref }}
@@ -32,14 +32,5 @@ jobs:
     with:
       ci_version: ${{ needs.setup.outputs.ci_version }}
 
-  build-steamlink:
-    needs: setup
-    uses: ./.github/workflows/build-steamlink.yml
-    with:
-      ci_version: ${{ needs.setup.outputs.ci_version }}
-
-  build-windows-macos:
-    needs: setup
-    uses: ./.github/workflows/build-win-mac.yml
-    with:
-      ci_version: ${{ needs.setup.outputs.ci_version }}
+  build-flatpak:
+    uses: ./.github/workflows/build-flatpak.yml

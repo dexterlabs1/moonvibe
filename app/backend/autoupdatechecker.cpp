@@ -44,7 +44,7 @@ void AutoUpdateChecker::start()
 #endif
 
     // We'll get a callback when this is finished
-    QUrl url("https://moonlight-stream.org/updates/qt.json");
+    QUrl url("https://raw.githubusercontent.com/dexterlabs1/moonvibe/main/updates/qt.json");
     QNetworkRequest request(url);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
