@@ -18,13 +18,15 @@ jobs:
           fetch-depth: 1
 
       - name: Install flatpak-builder
-        timeout-minutes: 10
+        timeout-minutes: 15
         env:
           DEBIAN_FRONTEND: noninteractive
           NEEDRESTART_MODE: a
         run: |
           sudo -E apt-get update
-          sudo -E apt-get install -y -o Dpkg::Lock::Timeout=300 flatpak flatpak-builder
+          # --no-install-recommends: the recommends set pulls ~123 packages
+          # (99 MB incl. ffmpeg) and has blown the step timeout on slow mirrors
+          sudo -E apt-get install -y --no-install-recommends -o Dpkg::Lock::Timeout=300 flatpak flatpak-builder
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
       - name: Build Flatpak
