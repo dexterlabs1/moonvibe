@@ -42,6 +42,27 @@ that file and cannot upgrade it. It keeps its own icon and keeps launching the
 old version no matter how many Flatpaks you install. Delete the AppImage and
 use the Flatpak.
 
+### Two installs at once (the one that will actually catch you)
+
+Flatpak has two separate installation scopes, `user` and `system`, and **the
+user one wins** when the same app is in both. Discover may put a new version in
+`system` while an old version stays in `user`; every launch then runs the old
+one, and nothing about the UI tells you. The listing above shows it plainly:
+
+```
+io.github.dexterlabs1.Moonvibe   0.3.0   master   system
+io.github.dexterlabs1.Moonvibe   0.1.0   master   user
+```
+
+Remove the stale copy so exactly one remains:
+
+```
+flatpak uninstall --user -y io.github.dexterlabs1.Moonvibe
+```
+
+Note that `flatpak install --or-update` only touches the scope you aim it at,
+so it cannot fix this on its own.
+
 ### Install or upgrade from a file, reliably
 
 ```
