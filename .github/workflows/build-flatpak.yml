@@ -26,11 +26,20 @@ jobs:
           sudo -E apt-get update
           # --no-install-recommends: the recommends set pulls ~123 packages
           # (99 MB incl. ffmpeg) and has blown the step timeout on slow mirrors.
-          # elfutils must be named explicitly: it is only a *recommends* of
-          # flatpak-builder, but it provides eu-strip, which flatpak-builder
-          # shells out to when stripping debuginfo. Without it every build dies
-          # at the first module it tries to strip (libplacebo).
-          sudo -E apt-get install -y --no-install-recommends -o Dpkg::Lock::Timeout=300 flatpak flatpak-builder elfutils
+          # Everything the build actually needs out of that set has to be named
+          # here instead, because each one is only a *recommends*:
+          #   elfutils        -> eu-strip, which flatpak-builder shells out to
+          #                      when stripping debuginfo. Without it the build
+          #                      dies at the first module it strips (libplacebo).
+          #   optipng         -> appstreamcli compose optimises the icons it
+          #                      generates with it (a recommends of
+          #                      appstream-compose, alongside the ffmpeg we are
+          #                      deliberately skipping).
+          #   librsvg2-common -> the gdk-pixbuf SVG loader. Our app icon ships
+          #                      scalable-only, so compose has to rasterise it.
+          # Symptom when these are missing is a late, unhelpful
+          # "appstreamcli compose failed: file-read-error".
+          sudo -E apt-get install -y --no-install-recommends -o Dpkg::Lock::Timeout=300 flatpak flatpak-builder elfutils optipng librsvg2-common
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
       - name: Build Flatpak
@@ -38,6 +47,19 @@ jobs:
         run: |
           flatpak-builder --user --install-deps-from=flathub --force-clean --disable-rofiles-fuse \
             --repo=repo builddir packaging/flatpak/io.github.dexterlabs1.Moonvibe.json
+
+      # appstreamcli only says "refer to the generated issue report"; it never
+      # prints it. Surface it so a failure is diagnosable from the log alone
+      # instead of costing another 20-minute round trip.
+      - name: Dump appstream issue report
+        if: failure()
+        run: |
+          find . -name '*.issues.yml' -o -name 'issues.yml' 2>/dev/null | while read -r f; do
+            echo "===== $f ====="
+            cat "$f"
+          done
+          echo "===== metainfo as installed ====="
+          find builddir -name '*.metainfo.xml' -exec sh -c 'echo "--- $1 ---"; cat "$1"' _ {} \; 2>/dev/null || true
 
       - name: Create bundle
         run: |
