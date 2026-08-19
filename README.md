@@ -15,14 +15,33 @@ compatible with stock [Sunshine](https://github.com/LizardByte/Sunshine).
 
 ## Install on a Steam Deck
 
-Download the latest `Moonvibe-*.flatpak` from
-[Releases](https://github.com/dexterlabs1/moonvibe/releases), then in **Desktop
-Mode** double-click it and let Discover install it. That is the whole flow --
-no terminal needed, and installing a newer file over an older one upgrades it
-in place, keeping your paired hosts, settings and Steam shortcut.
+In **Desktop Mode**, open <https://dexterlabs1.github.io/moonvibe/> and click
+the `.flatpakref` link. Discover adds Moonvibe as a software source and
+installs it. That is the whole thing.
+
+From then on **updates arrive in Discover's normal update list** -- no
+downloads, no files, no terminal. This is the recommended route and the only
+one that stays effortless.
 
 To reach it from Gaming Mode, open the application launcher, right-click
-**Moonvibe**, and choose *Add to Steam*. You only do that once.
+**Moonvibe**, and choose *Add to Steam*. You only do that once; updates keep
+the shortcut working.
+
+### Coming from a `.flatpak` file?
+
+Bundles have no source behind them, so Flatpak can never update one and each
+install lands in whichever scope the installer picked. Remove the bundle copies
+first, then install from the repo above, so exactly one install exists:
+
+```
+flatpak uninstall --user --system -y io.github.dexterlabs1.Moonvibe
+flatpak install --user -y https://dexterlabs1.github.io/moonvibe/moonvibe.flatpakref
+```
+
+### Single-file download
+
+Releases still carry a `Moonvibe-*.flatpak` for offline installs. It works, but
+it is the manual path -- you own the upgrading. See the traps below.
 
 ### If it does not upgrade, or you are unsure what is installed
 
