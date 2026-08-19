@@ -110,8 +110,14 @@
 		},
 		{
 			"name": "SDL2_ttf",
-			"buildsystem": "autotools",
-			"//": "autotools installs SDL2_ttf.pc, which the qmake PKGCONFIG check needs; the cmake build does not",
+			"buildsystem": "simple",
+			"//": "autotools installs SDL2_ttf.pc (cmake does not); touch generated files first or make tries to re-run the missing aclocal on git-checkout timestamps",
+			"build-commands": [
+				"touch aclocal.m4 configure Makefile.in",
+				"./configure --prefix=/app",
+				"make -j $FLATPAK_BUILDER_N_JOBS",
+				"make install"
+			],
 			"sources": [
 				{
 					"type": "git",
