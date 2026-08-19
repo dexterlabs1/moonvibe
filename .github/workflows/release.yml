@@ -1,0 +1,77 @@
+---
+name: Release
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (should match app/version.txt)"
+        required: true
+        default: "0.1.0"
+
+jobs:
+  build-appimage:
+    uses: ./.github/workflows/build-appimage.yml
+    with:
+      ci_version: ${{ inputs.version }}
+
+  build-flatpak:
+    uses: ./.github/workflows/build-flatpak.yml
+
+  release:
+    needs: [build-appimage, build-flatpak]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: Moonvibe ${{ inputs.version }}
+          files: |
+            artifacts/**/*.AppImage
+            artifacts/**/*.flatpak
+          body: |
+            ## Install on a Steam Deck
+
+            1. **Switch to Desktop Mode** (Steam button → Power → Switch to Desktop).
+            2. Download **`moonvibe.flatpak`** from the Assets below (log into GitHub in the browser while this repo is private).
+            3. Open **Konsole** and run:
+               ```
+               flatpak install --user ~/Downloads/moonvibe.flatpak
+               ```
+               (Or double-click the file to install through Discover.)
+            4. **Add to Steam:** open the application launcher → right-click **Moonvibe** → *Add to Steam*.
+            5. Return to **Gaming Mode**, find Moonvibe in your library (Non-Steam tab), and launch it.
+
+            ### First stream
+
+            - Make sure your PC is running **Vibepollo** (or Apollo/Sunshine) on the same network.
+            - Moonvibe will discover the host; complete the PIN pairing in the host's web UI.
+            - HDR requires Gaming Mode (gamescope) on the Steam Deck OLED and an HDR-enabled host.
+            - Recommended controller layout: default **Gamepad** template works out of the box.
+
+            ### Alternative: AppImage
+
+            The `Moonvibe-*.AppImage` runs without installation (`chmod +x`, then run), but the
+            Flatpak is the supported path on SteamOS — AppImages break more often across
+            SteamOS updates.
+
+            ---
+            _Moonvibe is a Steam Deck-focused fork of
+            [moonlight-qt](https://github.com/moonlight-stream/moonlight-qt) (GPL-3.0).
+            This is a pre-alpha build: stock Moonlight feature set with Moonvibe branding
+            and Deck-first packaging; the Deck-first UI, in-stream drawer, and Vibepollo
+            ABR integration are in development._
