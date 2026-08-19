@@ -10,7 +10,7 @@ is created (must not collide with "MoonDeck" the Decky plugin; candidates:
 
 > **Repo note:** the client is a separate project — create a fresh repository
 > for it (GPLv3, inherited from moonlight-qt/moonlight-common-c). This doc set
-> is parked in Purple-meadows-games only until that repo exists.
+> was parked in a separate private repo only until this one existed.
 
 ---
 

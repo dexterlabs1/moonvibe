@@ -39,20 +39,20 @@ never `pkill -f` a pattern that matches your own shell command line.
 
 ## Local build (WSL2 on the Windows dev PC) — verified 2026-08-19
 
-Development moved off the cloud sandbox onto Dexter's PC (Ryzen 9 9950X3D,
-125 GB RAM, RTX 5090). Builds run in **WSL2 Ubuntu 26.04**, not on Windows and
-not in CI. Full `make -j32 release` = **54 s**.
+Development runs on a Windows workstation in **WSL2 Ubuntu 26.04**, not on
+Windows natively and not in CI. `$SRC` below is the checkout path. A full
+`make -j$(nproc) release` takes under a minute on a 32-thread machine.
 
 ```bash
 # one-time: build deps (see the apt list above) inside the Ubuntu distro
 mkdir -p ~/build/moonvibe && cd ~/build/moonvibe
-qmake6 /mnt/c/Users/Dexbr/OneDrive/Documents/Projects/moonvibe/moonlight-qt.pro
+qmake6 $SRC/moonlight-qt.pro
 make -j$(nproc) release          # binary at ~/build/moonvibe/app/moonvibe
 ```
 
 - **Shadow-build into `~/…` on ext4, never into the source tree.** The repo
-  lives under OneDrive; build output there causes sync churn and the
-  dehydration trap (files list fine but read back as "cannot be found").
+  may live under a syncing cloud folder, where build output causes sync churn
+  and cloud-placeholder reads that fail.
 - Source is read over `/mnt/c` (9p), which caps the build at ~640 % CPU of a
   possible 3200 %. Fine for iteration. For anything heavier, `rsync -a
   --exclude .git --exclude build` the tree to `~/src/moonvibe` first — the
@@ -64,10 +64,10 @@ make -j$(nproc) release          # binary at ~/build/moonvibe/app/moonvibe
   `hevc_cuvid` on the RTX 5090. The "no hardware decoder" dialog that the cloud
   container always raised does NOT appear here, so don't write test steps that
   assume it.
-- **The dev PC is also the Vibepollo host**, so the client can be built and
-  tested against a real host in one place. Vibepollo answers on the WSL gateway
-  (`172.17.80.1:47989`), reporting `VirtualDisplayDriverReady` and
-  `SUNSHINE_SERVER_FREE`.
+- **The dev PC can also be the Vibepollo host**, so the client can be built and
+  tested against a real host in one place. Under default WSL networking the host
+  answers on the WSL gateway (`ip route show default`); under mirrored
+  networking it answers on `127.0.0.1`.
 - **Discovery stalls at "Connecting…" under default WSL networking**: the host
   name resolves to a public IPv6 address that WSL2's NAT cannot route. Fix with
   `%USERPROFILE%\.wslconfig` → `[wsl2]` / `networkingMode=mirrored` (needs

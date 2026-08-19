@@ -99,6 +99,5 @@ distilled rules; this file explains *why* each rule exists.
 - Releases so far: v0.1.0 (rebranded moonlight-qt master), v0.2.0 (dark
   Deck-first shell — Theme singleton, footer glyph hints, host cards, monogram
   capsules, dark dialogs).
-- Origin story docs also live in the user's Purple-meadows-games repo on
-  branch `claude/moonlight-steam-deck-client-5k72kt` (docs/moonlight-deck/);
-  the copies here in docs/ are canonical now.
+- The docs/ copies here are canonical; earlier drafts lived in a separate
+  private repo and are superseded.
