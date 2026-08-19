@@ -11,9 +11,52 @@ compatible with stock [Sunshine](https://github.com/LizardByte/Sunshine).
 > — controller-first UI, in-stream settings drawer, live ABR bitrate, Decky
 > Quick Access plugin — are being built next; see [BACKLOG.md](BACKLOG.md) and
 > [docs/PRODUCT.md](docs/PRODUCT.md).
->
-> The repo is private while it takes shape. It must go public before any build
-> is distributed (GPLv3).
+
+
+## Install on a Steam Deck
+
+Download the latest `Moonvibe-*.flatpak` from
+[Releases](https://github.com/dexterlabs1/moonvibe/releases), then in **Desktop
+Mode** double-click it and let Discover install it. That is the whole flow --
+no terminal needed, and installing a newer file over an older one upgrades it
+in place, keeping your paired hosts, settings and Steam shortcut.
+
+To reach it from Gaming Mode, open the application launcher, right-click
+**Moonvibe**, and choose *Add to Steam*. You only do that once.
+
+### If it does not upgrade, or you are unsure what is installed
+
+Open **Konsole** and paste this. It only reads -- it changes nothing:
+
+```
+flatpak list --app --columns=application,version,branch,installation | grep -i moon ; ls ~/Downloads/*.AppImage ~/Downloads/*.flatpak 2>/dev/null
+```
+
+That prints every installed Moonvibe, its version, and whether it is a `user`
+or `system` install -- and whether an old AppImage is still sitting in your
+Downloads folder.
+
+**An AppImage is not a Flatpak.** If you installed an early build by
+downloading `Moonvibe-*.AppImage` and running it, Flatpak knows nothing about
+that file and cannot upgrade it. It keeps its own icon and keeps launching the
+old version no matter how many Flatpaks you install. Delete the AppImage and
+use the Flatpak.
+
+### Install or upgrade from a file, reliably
+
+```
+flatpak install --user --or-update -y ~/Downloads/Moonvibe-0.3.0.flatpak
+```
+
+`--or-update` is the part that matters: plain `flatpak install` refuses when the
+app is already present instead of upgrading it.
+
+### Which one am I running?
+
+Open Moonvibe and tap the gear icon -- the Settings screen shows the version in
+the top bar. Anything from 0.2.0 onward has a near-black top bar reading
+**Hosts**. If you see a blue toolbar reading **Computers**, that is 0.1.0, which
+was upstream Moonlight with only the name changed.
 
 ## Why
 
