@@ -44,8 +44,63 @@ Session* AppModel::createSessionForApp(int appIndex)
     Q_ASSERT(appIndex < m_VisibleApps.count());
     NvApp app = m_VisibleApps.at(appIndex);
 
+    // Stamp this app as most recently played on this host so it leads the
+    // "Continue" row next time. Recorded at launch rather than on a clean exit,
+    // so a crashed or force-quit session still counts as played.
+    RecentApps::get().recordLaunch(m_Computer->uuid, app.id);
+    emit dataChanged(createIndex(appIndex, 0),
+                     createIndex(appIndex, 0),
+                     QVector<int>() << LastPlayedRole);
+    emit recentAppsChanged();
+
     return new Session(m_Computer, app);
 }
+
+QVariantList AppModel::getRecentApps(int maxCount)
+{
+    QVector<QPair<qint64, int>> played;
+
+    for (int i = 0; i < m_VisibleApps.count(); i++) {
+        const NvApp& app = m_VisibleApps.at(i);
+        qint64 lastPlayed = RecentApps::get().lastPlayed(m_Computer->uuid, app.id);
+
+        // A running app always earns a slot, even if it was started from
+        // another client and so was never stamped by us.
+        if (lastPlayed > 0 || m_Computer->currentGameId == app.id) {
+            played.append(qMakePair(lastPlayed, i));
+        }
+    }
+
+    std::sort(played.begin(), played.end(),
+              [this](const QPair<qint64, int>& a, const QPair<qint64, int>& b) {
+        // Whatever is running leads the row; everything else is newest-first.
+        bool aRunning = m_Computer->currentGameId == m_VisibleApps.at(a.second).id;
+        bool bRunning = m_Computer->currentGameId == m_VisibleApps.at(b.second).id;
+        if (aRunning != bRunning) {
+            return aRunning;
+        }
+        return a.first > b.first;
+    });
+
+    QVariantList result;
+    for (int i = 0; i < played.count() && i < maxCount; i++) {
+        int index = played.at(i).second;
+        // A copy, not a reference: BoxArtManager::loadBoxArt() takes NvApp&
+        NvApp app = m_VisibleApps.at(index);
+
+        QVariantMap entry;
+        entry["index"] = index;
+        entry["name"] = app.name;
+        entry["appid"] = app.id;
+        entry["boxart"] = m_BoxArtManager.loadBoxArt(m_Computer, app);
+        entry["running"] = m_Computer->currentGameId == app.id;
+        entry["lastPlayed"] = played.at(i).first;
+        result.append(entry);
+    }
+
+    return result;
+}
+
 
 int AppModel::getDirectLaunchAppIndex()
 {
@@ -93,6 +148,8 @@ QVariant AppModel::data(const QModelIndex &index, int role) const
         return app.directLaunch;
     case AppCollectorGameRole:
         return app.isAppCollectorGame;
+    case LastPlayedRole:
+        return RecentApps::get().lastPlayed(m_Computer->uuid, app.id);
     default:
         return QVariant();
     }
@@ -109,6 +166,7 @@ QHash<int, QByteArray> AppModel::roleNames() const
     names[AppIdRole] = "appid";
     names[DirectLaunchRole] = "directLaunch";
     names[AppCollectorGameRole] = "appCollectorGame";
+    names[LastPlayedRole] = "lastPlayed";
 
     return names;
 }

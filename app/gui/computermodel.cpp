@@ -114,6 +114,42 @@ QHash<int, QByteArray> ComputerModel::roleNames() const
     return names;
 }
 
+
+// Sunshine, Apollo and Vibepollo all serve their web UI on 47990 over https.
+// GeForce Experience hosts have no web UI, so this is only offered when the
+// host is not Nvidia server software.
+QString ComputerModel::getHostWebUiUrl(int computerIndex)
+{
+    if (computerIndex < 0 || computerIndex >= m_Computers.count()) {
+        return QString();
+    }
+
+    NvComputer* computer = m_Computers[computerIndex];
+    QReadLocker lock(&computer->lock);
+
+    if (computer->isNvidiaServerSoftware) {
+        return QString();
+    }
+
+    QString host = computer->activeAddress.address();
+    if (host.isEmpty()) {
+        host = computer->localAddress.address();
+    }
+    if (host.isEmpty()) {
+        host = computer->manualAddress.address();
+    }
+    if (host.isEmpty()) {
+        return QString();
+    }
+
+    // IPv6 literals have to be bracketed inside a URL
+    if (host.contains(QLatin1Char(':'))) {
+        host = QLatin1Char('[') + host + QLatin1Char(']');
+    }
+
+    return QStringLiteral("https://%1:47990").arg(host);
+}
+
 Session* ComputerModel::createSessionForCurrentGame(int computerIndex)
 {
     Q_ASSERT(computerIndex < m_Computers.count());

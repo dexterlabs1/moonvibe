@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/boxartmanager.h"
+#include "backend/recentapps.h"
 #include "backend/computermanager.h"
 #include "streaming/session.h"
 
@@ -19,6 +20,7 @@ class AppModel : public QAbstractListModel
         AppIdRole,
         DirectLaunchRole,
         AppCollectorGameRole,
+        LastPlayedRole,
     };
 
 public:
@@ -32,6 +34,10 @@ public:
     Q_INVOKABLE int getDirectLaunchAppIndex();
 
     Q_INVOKABLE int getRunningAppId();
+
+    // Apps this host has launched before, newest first. Each entry is a map of
+    // index/name/appid/boxart/running/lastPlayed for the "Continue" hero row.
+    Q_INVOKABLE QVariantList getRecentApps(int maxCount);
 
     Q_INVOKABLE QString getRunningAppName();
 
@@ -54,6 +60,8 @@ private slots:
 
 signals:
     void computerLost();
+
+    void recentAppsChanged();
 
 private:
     void updateAppList(QVector<NvApp> newList);

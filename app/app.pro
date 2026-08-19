@@ -168,6 +168,8 @@ macx {
 SOURCES += \
     backend/nvaddress.cpp \
     backend/nvapp.cpp \
+    backend/recentapps.cpp \
+    backend/steamgriddb.cpp \
     cli/pair.cpp \
     main.cpp \
     backend/computerseeker.cpp \
@@ -210,6 +212,8 @@ HEADERS += \
     SDL_compat.h \
     backend/nvaddress.h \
     backend/nvapp.h \
+    backend/recentapps.h \
+    backend/steamgriddb.h \
     cli/pair.h \
     settings/compatfetcher.h \
     settings/mappingfetcher.h \

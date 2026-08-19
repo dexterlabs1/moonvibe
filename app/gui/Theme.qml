@@ -37,6 +37,30 @@ QtObject {
         return Qt.hsla(hueFor(name), 0.38, 0.11, 1.0)
     }
 
+    // "3h ago" / "yesterday" — short enough for a card, vague enough to stay
+    // true without a timer refreshing it every minute.
+    function relativeTime(msSinceEpoch) {
+        if (!msSinceEpoch) {
+            return qsTr("Never played")
+        }
+
+        var mins = Math.floor((Date.now() - msSinceEpoch) / 60000)
+        if (mins < 2)    return qsTr("Just now")
+        if (mins < 60)   return qsTr("%1 min ago").arg(mins)
+
+        var hours = Math.floor(mins / 60)
+        if (hours < 24)  return qsTr("%1h ago").arg(hours)
+
+        var days = Math.floor(hours / 24)
+        if (days === 1)  return qsTr("Yesterday")
+        if (days < 30)   return qsTr("%1 days ago").arg(days)
+
+        var months = Math.floor(days / 30)
+        if (months < 12) return qsTr("%1 mo ago").arg(months)
+
+        return qsTr("Over a year ago")
+    }
+
     function initialsFor(name) {
         var words = name.trim().split(/\s+/)
         var initials = ""

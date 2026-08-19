@@ -34,7 +34,7 @@ private slots:
 
 private:
     QUrl
-    loadBoxArtFromNetwork(NvComputer* computer, int appId);
+    loadBoxArtFromNetwork(NvComputer* computer, NvApp& app);
 
     QString
     getFilePathForBoxArt(NvComputer* computer, int appId);

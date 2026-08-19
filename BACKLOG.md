@@ -8,15 +8,19 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
 - [x] Flatpak manifest (`packaging/flatpak/`) with gamescope-WSI layer + Deck finish-args
 - [x] CI: AppImage + Flatpak bundle on every push
 - [ ] First on-Deck smoke test of the Flatpak artifact (HDR under gamescope, pairing, stream)
-- [ ] Make repo public + tag v0.1.0 release with both artifacts
+- [x] Tag v0.1.0 release with both artifacts
+- [ ] Make repo public (GPLv3 gate: required before distributing any build)
 
 ## P1 — Deck-first UI shell
 - [x] Dark theme shell v1 (v0.2.0): Theme singleton, wordmark top bar, footer controller-glyph hints, host status cards, app capsules with monogram placeholders + running badge, dark dialogs
-- [ ] New QML shell: home/library per mockups (hero row, capsule grid, footer glyph hints)
+- [x] New QML shell: home/library per mockups (Continue hero row of recently played apps above the capsule grid, footer glyph hints, focus moves between the two)
 - [ ] 100% controller-complete navigation (audit every dialog; single spatial-nav system)
 - [ ] Pairing wizard: discovery → OTP/PIN pad (no OS keyboard) → bandwidth probe → defaults
+  - [x] PIN step: host name, PIN in large tiles, deep link to the host web UI, waiting state
+  - [ ] OTP pairing for Apollo/Vibepollo hosts
+  - [ ] Bandwidth probe + recommended defaults steps
 - [ ] Per-host → per-app settings inheritance (origin tags in UI)
-- [ ] SteamGridDB artwork enrichment with `appasset` fallback + cache
+- [x] SteamGridDB artwork enrichment with `appasset` fallback + cache (API key in Host Settings; unverified end to end -- no key available at build time)
 - [ ] "Add to Steam" button (shortcut + artwork + controller profile, chiaki-ng style)
 
 ## P2 — In-stream control

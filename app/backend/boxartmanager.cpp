@@ -1,5 +1,6 @@
 #include "boxartmanager.h"
 #include "../path.h"
+#include "steamgriddb.h"
 
 #include <QImageReader>
 #include <QImageWriter>
@@ -56,10 +57,10 @@ signals:
 private:
     void run()
     {
-        QUrl image = m_Bam->loadBoxArtFromNetwork(m_Computer, m_App.id);
+        QUrl image = m_Bam->loadBoxArtFromNetwork(m_Computer, m_App);
         if (image.isEmpty()) {
             // Give it another shot if it fails once
-            image = m_Bam->loadBoxArtFromNetwork(m_Computer, m_App.id);
+            image = m_Bam->loadBoxArtFromNetwork(m_Computer, m_App);
         }
         emit boxArtFetchCompleted(m_Computer, m_App, image);
     }
@@ -104,15 +105,26 @@ void BoxArtManager::handleBoxArtLoadComplete(NvComputer* computer, NvApp app, QU
     }
 }
 
-QUrl BoxArtManager::loadBoxArtFromNetwork(NvComputer* computer, int appId)
+QUrl BoxArtManager::loadBoxArtFromNetwork(NvComputer* computer, NvApp& app)
 {
-    NvHTTP http(computer);
-
-    QString cachePath = getFilePathForBoxArt(computer, appId);
+    QString cachePath = getFilePathForBoxArt(computer, app.id);
     QImage image;
-    try {
-        image = http.getBoxArt(appId);
-    } catch (...) {}
+
+    // Prefer SteamGridDB when the user has supplied a key. Hosts serve whatever
+    // art the launcher had, which for non-Steam entries is usually a generic
+    // placeholder; SteamGridDB has a real 600x900 capsule for most things.
+    // Falling back to the host keeps the client fully functional without a key
+    // and whenever a title simply is not in their database.
+    if (SteamGridDb::isConfigured()) {
+        image = SteamGridDb::fetchCapsule(app.name);
+    }
+
+    if (image.isNull()) {
+        NvHTTP http(computer);
+        try {
+            image = http.getBoxArt(app.id);
+        } catch (...) {}
+    }
 
     // Cache the box art on disk if it loaded
     if (!image.isNull()) {

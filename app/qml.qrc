@@ -4,6 +4,8 @@
         <file>gui/qmldir</file>
         <file>gui/Theme.qml</file>
         <file>gui/NavHint.qml</file>
+        <file>gui/HeroCard.qml</file>
+        <file>gui/PairingDialog.qml</file>
         <file>gui/PcView.qml</file>
         <file>gui/AppView.qml</file>
         <file>gui/SettingsView.qml</file>

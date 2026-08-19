@@ -1009,6 +1009,37 @@ Flickable {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!")
                 }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("SteamGridDB API key (optional)")
+                    font.pointSize: 12
+                    topPadding: 8
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Fetches proper 600x900 capsule artwork for your library. Leave empty to use the artwork your host provides.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    opacity: 0.8
+                }
+
+                TextField {
+                    id: steamGridDbKeyField
+                    width: parent.width
+                    font.pointSize: 12
+                    placeholderText: qsTr("Paste your key from steamgriddb.com")
+                    text: StreamingPreferences.steamGridDbApiKey
+                    // The key is a credential, so it is masked like one. It is
+                    // stored in plain text in the config either way, same as
+                    // every other preference.
+                    echoMode: activeFocus ? TextInput.Normal : TextInput.Password
+
+                    onTextChanged: {
+                        StreamingPreferences.steamGridDbApiKey = text
+                    }
+                }
             }
         }
 

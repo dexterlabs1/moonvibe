@@ -130,6 +130,7 @@ public:
     Q_PROPERTY(bool playAudioOnHost MEMBER playAudioOnHost NOTIFY playAudioOnHostChanged)
     Q_PROPERTY(bool multiController MEMBER multiController NOTIFY multiControllerChanged)
     Q_PROPERTY(bool enableMdns MEMBER enableMdns NOTIFY enableMdnsChanged)
+    Q_PROPERTY(QString steamGridDbApiKey MEMBER steamGridDbApiKey NOTIFY steamGridDbApiKeyChanged)
     Q_PROPERTY(bool quitAppAfter MEMBER quitAppAfter NOTIFY quitAppAfterChanged)
     Q_PROPERTY(bool absoluteMouseMode MEMBER absoluteMouseMode NOTIFY absoluteMouseModeChanged)
     Q_PROPERTY(bool absoluteTouchMode MEMBER absoluteTouchMode NOTIFY absoluteTouchModeChanged)
@@ -172,6 +173,9 @@ public:
     bool playAudioOnHost;
     bool multiController;
     bool enableMdns;
+    // Optional SteamGridDB API key. Empty disables artwork enrichment
+    // entirely; the host's own appasset art is used as before.
+    QString steamGridDbApiKey;
     bool quitAppAfter;
     bool absoluteMouseMode;
     bool absoluteTouchMode;
@@ -212,6 +216,7 @@ signals:
     void multiControllerChanged();
     void unsupportedFpsChanged();
     void enableMdnsChanged();
+    void steamGridDbApiKeyChanged();
     void quitAppAfterChanged();
     void absoluteMouseModeChanged();
     void absoluteTouchModeChanged();

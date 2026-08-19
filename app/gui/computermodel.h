@@ -37,6 +37,10 @@ public:
 
     Q_INVOKABLE void pairComputer(int computerIndex, QString pin);
 
+    // https URL of the host's own web UI, where the pairing PIN is entered.
+    // Empty if we have no usable address for the host.
+    Q_INVOKABLE QString getHostWebUiUrl(int computerIndex);
+
     Q_INVOKABLE void testConnectionForComputer(int computerIndex);
 
     Q_INVOKABLE void wakeComputer(int computerIndex);

@@ -29,6 +29,7 @@
 #define SER_VIDEODEC "videodec"
 #define SER_WINDOWMODE "windowmode"
 #define SER_MDNS "mdns"
+#define SER_STEAMGRIDDB_KEY "steamgriddbapikey"
 #define SER_QUITAPPAFTER "quitAppAfter"
 #define SER_ABSMOUSEMODE "mouseacceleration"
 #define SER_ABSTOUCHMODE "abstouchmode"
@@ -134,6 +135,7 @@ void StreamingPreferences::reload()
     playAudioOnHost = settings.value(SER_HOSTAUDIO, false).toBool();
     multiController = settings.value(SER_MULTICONT, true).toBool();
     enableMdns = settings.value(SER_MDNS, true).toBool();
+    steamGridDbApiKey = settings.value(SER_STEAMGRIDDB_KEY, QString()).toString();
     quitAppAfter = settings.value(SER_QUITAPPAFTER, false).toBool();
     absoluteMouseMode = settings.value(SER_ABSMOUSEMODE, false).toBool();
     absoluteTouchMode = settings.value(SER_ABSTOUCHMODE, true).toBool();
@@ -334,6 +336,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_HOSTAUDIO, playAudioOnHost);
     settings.setValue(SER_MULTICONT, multiController);
     settings.setValue(SER_MDNS, enableMdns);
+    settings.setValue(SER_STEAMGRIDDB_KEY, steamGridDbApiKey);
     settings.setValue(SER_QUITAPPAFTER, quitAppAfter);
     settings.setValue(SER_ABSMOUSEMODE, absoluteMouseMode);
     settings.setValue(SER_ABSTOUCHMODE, absoluteTouchMode);
