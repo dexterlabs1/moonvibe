@@ -34,6 +34,22 @@ const int SdlInputHandler::k_ButtonMap[] = {
     TOUCHPAD_FLAG,
 };
 
+// Translates a bitmask of (1 << SDL_GameControllerButton) values, which is how
+// a chord is stored, into the Limelight button flags we actually track in
+// GamepadState and match chords against.
+int SdlInputHandler::gamepadChordToButtonFlags(quint32 chord)
+{
+    int flags = 0;
+
+    for (int i = 0; i < (int)SDL_arraysize(k_ButtonMap); i++) {
+        if (chord & (1U << i)) {
+            flags |= k_ButtonMap[i];
+        }
+    }
+
+    return flags;
+}
+
 GamepadState*
 SdlInputHandler::findStateForGamepad(SDL_JoystickID id)
 {
@@ -283,9 +299,64 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         }
     }
 
+    // Update our button bitmap first, so the chords below see the same state no
+    // matter what we end up doing with this event.
     if (event->state == SDL_PRESSED) {
         state->buttons |= k_ButtonMap[event->button];
+    }
+    else {
+        state->buttons &= ~k_ButtonMap[event->button];
+    }
 
+    // The drawer's gamepad chord (Select+L5 on a Deck by default). The buttons
+    // that open our own menu are never forwarded: we clear them on both sides so
+    // the host doesn't receive the tail of the chord as the user lets go.
+    if (m_DrawerGamepadChordFlags != 0 && state->buttons == m_DrawerGamepadChordFlags) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Detected drawer toggle gamepad combo");
+
+        Session::get()->toggleDrawer();
+
+        state->buttons = 0;
+        LiSendMultiControllerEvent(state->index, m_GamepadMask,
+                                   0, 0, 0, 0, 0, 0, 0);
+        return;
+    }
+
+    // While the drawer is open it owns the gamepad, exactly as keyboard.cpp
+    // hands it the keyboard. Nothing here reaches the host.
+    if (Session::get()->isDrawerOpen()) {
+        if (event->state == SDL_PRESSED) {
+            StreamDrawer& drawer = Session::get()->getDrawer();
+
+            switch (event->button) {
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                drawer.moveUp();
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                drawer.moveDown();
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                drawer.adjustLeft();
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                drawer.adjustRight();
+                break;
+            case SDL_CONTROLLER_BUTTON_B:
+                Session::get()->toggleDrawer();
+                return;
+            default:
+                // Swallowed rather than forwarded: the drawer has focus.
+                return;
+            }
+
+            Session::get()->refreshDrawer();
+        }
+
+        return;
+    }
+
+    if (event->state == SDL_PRESSED) {
         if (event->button == SDL_CONTROLLER_BUTTON_START) {
             state->lastStartDownTime = SDL_GetTicks();
         }
@@ -320,8 +391,6 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         }
     }
     else {
-        state->buttons &= ~k_ButtonMap[event->button];
-
         if (event->button == SDL_CONTROLLER_BUTTON_START) {
             if (SDL_GetTicks() - state->lastStartDownTime > MOUSE_EMULATION_LONG_PRESS_TIME) {
                 if (state->mouseEmulationTimer != 0) {

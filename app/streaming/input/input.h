@@ -1,6 +1,7 @@
 #pragma once
 
 #include "settings/streamingpreferences.h"
+#include "settings/keybindings.h"
 #include "backend/computermanager.h"
 
 #include "SDL_compat.h"
@@ -190,6 +191,12 @@ private:
     void performSpecialKeyCombo(KeyCombo combo);
 
     static
+    KeyBindings::Action actionForKeyCombo(KeyCombo combo);
+
+    static
+    int gamepadChordToButtonFlags(quint32 chord);
+
+    static
     Uint32 longPressTimerCallback(Uint32 interval, void* param);
 
     static
@@ -232,8 +239,15 @@ private:
         KeyCombo keyCombo;
         SDL_Keycode keyCode;
         SDL_Scancode scanCode;
+
+        // Bitmask of KeyBindings::Modifier values that must be held
+        unsigned modifiers;
+
         bool enabled;
     } m_SpecialKeyCombos[KeyComboMax];
+
+    // Limelight button flags that toggle the drawer when held together
+    int m_DrawerGamepadChordFlags;
 
     SDL_TouchFingerEvent m_LastTouchDownEvent;
     SDL_TouchFingerEvent m_LastTouchUpEvent;

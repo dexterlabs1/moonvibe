@@ -53,6 +53,12 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected drawer toggle combo");
         Session::get()->toggleDrawer();
+
+        // Force raise all keys. While the drawer is open we swallow key events
+        // rather than forwarding them, so anything still held down (the
+        // modifiers of the chord that just opened it, most obviously) would
+        // otherwise never get its key up event on the host.
+        raiseAllKeys();
         break;
 
     case KeyComboToggleStatsOverlay:
@@ -191,12 +197,50 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         return;
     }
 
+    // Check for our special key combos. Each one carries the modifier mask it
+    // was bound with, rather than every combo sharing one hardcoded
+    // Ctrl+Alt+Shift prefix. This runs before the drawer looks at the event so
+    // a bound chord -- the drawer's own toggle above all -- still works while
+    // the drawer is open.
+    if (event->state == SDL_PRESSED) {
+        unsigned heldModifiers = KeyBindings::modifiersFromSdl(event->keysym.mod);
+
+        // First we test the SDLK combos for matches,
+        // that way we ensure that latin keyboard users
+        // can match to the key they see on their keyboards.
+        // If nothing matches that, we'll then go on to
+        // checking scancodes so non-latin keyboard users
+        // can have working hotkeys (though possibly in
+        // odd positions). We must do all SDLK tests before
+        // any scancode tests to avoid issues in cases
+        // where the SDLK for one shortcut collides with
+        // the scancode of another.
+
+        for (int i = 0; i < KeyComboMax; i++) {
+            if (m_SpecialKeyCombos[i].enabled &&
+                    KeyBindings::modifiersMatch(m_SpecialKeyCombos[i].modifiers, heldModifiers) &&
+                    event->keysym.sym == m_SpecialKeyCombos[i].keyCode) {
+                performSpecialKeyCombo(m_SpecialKeyCombos[i].keyCombo);
+                return;
+            }
+        }
+
+        for (int i = 0; i < KeyComboMax; i++) {
+            if (m_SpecialKeyCombos[i].enabled &&
+                    m_SpecialKeyCombos[i].scanCode != SDL_SCANCODE_UNKNOWN &&
+                    KeyBindings::modifiersMatch(m_SpecialKeyCombos[i].modifiers, heldModifiers) &&
+                    event->keysym.scancode == m_SpecialKeyCombos[i].scanCode) {
+                performSpecialKeyCombo(m_SpecialKeyCombos[i].keyCombo);
+                return;
+            }
+        }
+    }
+
     // While the drawer is open it owns navigation, and the game must not see
     // these keys at all -- a stray arrow press reaching the host mid-menu is
     // exactly the kind of thing that makes an in-stream overlay feel unsafe.
-    // Modifier combos still fall through so the quit and toggle chords work.
-    if (Session::get()->isDrawerOpen() &&
-            !(event->keysym.mod & (KMOD_CTRL | KMOD_ALT))) {
+    // Anything the user bound to a shortcut has already fired above.
+    if (Session::get()->isDrawerOpen()) {
         if (event->state == SDL_PRESSED) {
             StreamDrawer& drawer = Session::get()->getDrawer();
 
@@ -225,37 +269,6 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         }
 
         return;
-    }
-
-    // Check for our special key combos
-    if ((event->state == SDL_PRESSED) &&
-            (event->keysym.mod & KMOD_CTRL) &&
-            (event->keysym.mod & KMOD_ALT) &&
-            (event->keysym.mod & KMOD_SHIFT)) {
-        // First we test the SDLK combos for matches,
-        // that way we ensure that latin keyboard users
-        // can match to the key they see on their keyboards.
-        // If nothing matches that, we'll then go on to
-        // checking scancodes so non-latin keyboard users
-        // can have working hotkeys (though possibly in
-        // odd positions). We must do all SDLK tests before
-        // any scancode tests to avoid issues in cases
-        // where the SDLK for one shortcut collides with
-        // the scancode of another.
-
-        for (int i = 0; i < KeyComboMax; i++) {
-            if (m_SpecialKeyCombos[i].enabled && event->keysym.sym == m_SpecialKeyCombos[i].keyCode) {
-                performSpecialKeyCombo(m_SpecialKeyCombos[i].keyCombo);
-                return;
-            }
-        }
-
-        for (int i = 0; i < KeyComboMax; i++) {
-            if (m_SpecialKeyCombos[i].enabled && event->keysym.scancode == m_SpecialKeyCombos[i].scanCode) {
-                performSpecialKeyCombo(m_SpecialKeyCombos[i].keyCombo);
-                return;
-            }
-        }
     }
 
     // Set modifier flags

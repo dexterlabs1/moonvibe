@@ -185,6 +185,7 @@ SOURCES += \
     cli/quitstream.cpp \
     cli/startstream.cpp \
     settings/compatfetcher.cpp \
+    settings/keybindings.cpp \
     settings/mappingfetcher.cpp \
     settings/streamingpreferences.cpp \
     streaming/input/abstouch.cpp \
@@ -218,6 +219,7 @@ HEADERS += \
     backend/steamgriddb.h \
     cli/pair.h \
     settings/compatfetcher.h \
+    settings/keybindings.h \
     settings/mappingfetcher.h \
     utils.h \
     backend/computerseeker.h \

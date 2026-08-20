@@ -9,6 +9,41 @@
 #include <QDir>
 #include <QGuiApplication>
 
+// Which stored binding drives which in-stream action. Spelled out rather than
+// relying on the two enums happening to be declared in the same order.
+KeyBindings::Action SdlInputHandler::actionForKeyCombo(KeyCombo combo)
+{
+    switch (combo) {
+    case KeyComboQuit:
+        return KeyBindings::ActionQuit;
+    case KeyComboUngrabInput:
+        return KeyBindings::ActionUngrabInput;
+    case KeyComboToggleFullScreen:
+        return KeyBindings::ActionToggleFullScreen;
+    case KeyComboToggleStatsOverlay:
+        return KeyBindings::ActionToggleStatsOverlay;
+    case KeyComboToggleDrawer:
+        return KeyBindings::ActionToggleDrawer;
+    case KeyComboToggleMouseMode:
+        return KeyBindings::ActionToggleMouseMode;
+    case KeyComboToggleCursorHide:
+        return KeyBindings::ActionToggleCursorHide;
+    case KeyComboToggleMinimize:
+        return KeyBindings::ActionToggleMinimize;
+    case KeyComboPasteText:
+        return KeyBindings::ActionPasteText;
+    case KeyComboTogglePointerRegionLock:
+        return KeyBindings::ActionTogglePointerRegionLock;
+    case KeyComboQuitAndExit:
+        return KeyBindings::ActionQuitAndExit;
+    case KeyComboToggleKeyboardGrab:
+        return KeyBindings::ActionToggleKeyboardGrab;
+    default:
+        Q_UNREACHABLE();
+        return KeyBindings::ActionQuit;
+    }
+}
+
 SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, int streamHeight)
     : m_MultiController(prefs.multiController),
       m_GamepadMouse(prefs.gamepadMouse),
@@ -79,69 +114,30 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, "1");
 
-    // Populate special key combo configuration
-    m_SpecialKeyCombos[KeyComboQuit].keyCombo = KeyComboQuit;
-    m_SpecialKeyCombos[KeyComboQuit].keyCode = SDLK_q;
-    m_SpecialKeyCombos[KeyComboQuit].scanCode = SDL_SCANCODE_Q;
-    m_SpecialKeyCombos[KeyComboQuit].enabled = true;
+    // Populate special key combo configuration from the rebindable bindings
+    // store. Its defaults are the table that used to be written out here, so a
+    // user who has never touched a binding sees exactly the old behavior.
+    KeyBindings* keyBindings = KeyBindings::get();
+    keyBindings->reload();
 
-    m_SpecialKeyCombos[KeyComboUngrabInput].keyCombo = KeyComboUngrabInput;
-    m_SpecialKeyCombos[KeyComboUngrabInput].keyCode = SDLK_z;
-    m_SpecialKeyCombos[KeyComboUngrabInput].scanCode = SDL_SCANCODE_Z;
-    m_SpecialKeyCombos[KeyComboUngrabInput].enabled = WMUtils::isRunningDesktopEnvironment();
+    for (int i = 0; i < KeyComboMax; i++) {
+        KeyCombo combo = (KeyCombo)i;
+        KeyBindings::Action action = actionForKeyCombo(combo);
+        KeyBindings::Binding binding = keyBindings->binding(action);
 
-    m_SpecialKeyCombos[KeyComboToggleFullScreen].keyCombo = KeyComboToggleFullScreen;
-    m_SpecialKeyCombos[KeyComboToggleFullScreen].keyCode = SDLK_x;
-    m_SpecialKeyCombos[KeyComboToggleFullScreen].scanCode = SDL_SCANCODE_X;
-    m_SpecialKeyCombos[KeyComboToggleFullScreen].enabled = WMUtils::isRunningDesktopEnvironment();
+        m_SpecialKeyCombos[i].keyCombo = combo;
+        m_SpecialKeyCombos[i].keyCode = binding.keyCode;
+        m_SpecialKeyCombos[i].scanCode = binding.scanCode;
+        m_SpecialKeyCombos[i].modifiers = binding.modifiers;
 
-    // The in-stream drawer. This is a placeholder binding: the drawer is
-    // meant to open on Select+L5 on a Deck, which needs the rebindable
-    // shortcut work before it can be expressed here.
-    m_SpecialKeyCombos[KeyComboToggleDrawer].keyCombo = KeyComboToggleDrawer;
-    m_SpecialKeyCombos[KeyComboToggleDrawer].keyCode = SDLK_d;
-    m_SpecialKeyCombos[KeyComboToggleDrawer].scanCode = SDL_SCANCODE_D;
-    m_SpecialKeyCombos[KeyComboToggleDrawer].enabled = true;
+        // An action the user unbound (or a binding we couldn't read) is simply
+        // never matched, which is also how the environment-gated ones are
+        // switched off when there's no desktop to go back to.
+        m_SpecialKeyCombos[i].enabled = binding.valid && keyBindings->isEnabled(action);
+    }
 
-    m_SpecialKeyCombos[KeyComboToggleStatsOverlay].keyCombo = KeyComboToggleStatsOverlay;
-    m_SpecialKeyCombos[KeyComboToggleStatsOverlay].keyCode = SDLK_s;
-    m_SpecialKeyCombos[KeyComboToggleStatsOverlay].scanCode = SDL_SCANCODE_S;
-    m_SpecialKeyCombos[KeyComboToggleStatsOverlay].enabled = true;
-
-    m_SpecialKeyCombos[KeyComboToggleMouseMode].keyCombo = KeyComboToggleMouseMode;
-    m_SpecialKeyCombos[KeyComboToggleMouseMode].keyCode = SDLK_m;
-    m_SpecialKeyCombos[KeyComboToggleMouseMode].scanCode = SDL_SCANCODE_M;
-    m_SpecialKeyCombos[KeyComboToggleMouseMode].enabled = true;
-
-    m_SpecialKeyCombos[KeyComboToggleCursorHide].keyCombo = KeyComboToggleCursorHide;
-    m_SpecialKeyCombos[KeyComboToggleCursorHide].keyCode = SDLK_c;
-    m_SpecialKeyCombos[KeyComboToggleCursorHide].scanCode = SDL_SCANCODE_C;
-    m_SpecialKeyCombos[KeyComboToggleCursorHide].enabled = true;
-
-    m_SpecialKeyCombos[KeyComboToggleMinimize].keyCombo = KeyComboToggleMinimize;
-    m_SpecialKeyCombos[KeyComboToggleMinimize].keyCode = SDLK_d;
-    m_SpecialKeyCombos[KeyComboToggleMinimize].scanCode = SDL_SCANCODE_D;
-    m_SpecialKeyCombos[KeyComboToggleMinimize].enabled = WMUtils::isRunningDesktopEnvironment();
-
-    m_SpecialKeyCombos[KeyComboPasteText].keyCombo = KeyComboPasteText;
-    m_SpecialKeyCombos[KeyComboPasteText].keyCode = SDLK_v;
-    m_SpecialKeyCombos[KeyComboPasteText].scanCode = SDL_SCANCODE_V;
-    m_SpecialKeyCombos[KeyComboPasteText].enabled = true;
-
-    m_SpecialKeyCombos[KeyComboTogglePointerRegionLock].keyCombo = KeyComboTogglePointerRegionLock;
-    m_SpecialKeyCombos[KeyComboTogglePointerRegionLock].keyCode = SDLK_l;
-    m_SpecialKeyCombos[KeyComboTogglePointerRegionLock].scanCode = SDL_SCANCODE_L;
-    m_SpecialKeyCombos[KeyComboTogglePointerRegionLock].enabled = true;
-
-    m_SpecialKeyCombos[KeyComboQuitAndExit].keyCombo = KeyComboQuitAndExit;
-    m_SpecialKeyCombos[KeyComboQuitAndExit].keyCode = SDLK_e;
-    m_SpecialKeyCombos[KeyComboQuitAndExit].scanCode = SDL_SCANCODE_E;
-    m_SpecialKeyCombos[KeyComboQuitAndExit].enabled = true;
-
-    m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].keyCombo = KeyComboToggleKeyboardGrab;
-    m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].keyCode = SDLK_k;
-    m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].scanCode = SDL_SCANCODE_K;
-    m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].enabled = WMUtils::isRunningDesktopEnvironment();
+    // The gamepad chord that opens the drawer: Select+L5 on a Deck by default.
+    m_DrawerGamepadChordFlags = gamepadChordToButtonFlags(keyBindings->drawerGamepadChord());
 
     m_OldIgnoreDevices = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES);
     m_OldIgnoreDevicesExcept = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT);
