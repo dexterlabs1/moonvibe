@@ -1,5 +1,72 @@
 # Engineering notes — lessons with full context
 
+## Session 2 (2026-08-19/20): local builds, the drawer, and a night lost to a lying harness
+
+### The headline lesson: the screenshot harness was wrong, not the product
+
+Hours went into "the UI renders black". It was the Xvfb/headless setup, not the
+code — confirmed only when the user looked at the app on a real desktop and said
+it rendered fine. Before that I had blamed, in order: my own QML, the Qt Quick
+Controls style, the user's monitor being off, the GPU/dxg path, a system Qt
+regression, and a Flatpak runtime update. All wrong.
+
+What actually generated false signals:
+- **`qmlscene`/`qml` is not installed.** A "trivial Qt app is also black" test
+  ran nothing at all and produced a confident wrong conclusion. Check the binary
+  exists before believing a negative result.
+- **Backgrounded apps die when the launching `wsl.exe` shell exits.** Launch,
+  interact and screenshot must happen in ONE command, or you photograph a dead
+  app — or worse, a stale image left on the X root that still shows a window
+  frame.
+- **`pkill -f <pattern>` matched the invoking shell three separate times**, each
+  time killing the script mid-run and producing empty output that looked like a
+  hang. This is already documented from session 1 and it still bit repeatedly.
+  Use `pkill -x <exact name>` or kill by PID.
+- **Windows-side and X-side window enumeration cannot see WSLg windows** — the
+  app runs on Wayland there. Neither `EnumWindows` nor `xwininfo -root` finds
+  it, so "no window" from those tools means nothing.
+
+**Rule: when a visual question can be answered by the person sitting at the
+machine, ask them first.** One question would have saved the night.
+
+### Incremental builds lie about version, and qmake will not tell you
+
+`VERSION_STR` is baked in at qmake time from `app/version.txt`, but the generated
+Makefile has no dependency on that file. Bumping the version and running `make`
+leaves the old string compiled in, so the running app reports a stale version
+while the Makefile shows the new one. Delete `app/Makefile*`, re-run qmake6, and
+touch `app/backend/systemproperties.cpp`. Flatpak builds are clean builds and
+were never affected.
+
+### The custom Qt Quick Controls style does not work yet
+
+`app/gui/style/Moonvibe/` exists and is tracked but is NOT selected. Both routes
+fail:
+- `QQuickStyle::setStyle(":/Moonvibe")` → *"Style names must not contain paths"*.
+- As a named module (qmldir with `module Moonvibe`, resource-aliased, with
+  `engine.addImportPath("qrc:/")`) it loads with **no error of any kind** and the
+  app then never shows a window. Reduced to a single self-contained `Label.qml`
+  with no Theme dependency and it still failed, so it is the style mechanism,
+  not the content.
+
+This matters because it is the only way surfaces nobody hand-styles (SettingsView
+is 1800 lines) stop looking like stock Qt. Until it is understood, hand-style
+surfaces one at a time — that approach demonstrably works.
+
+### Flatpak, not the local build, is what the user runs
+
+The local build and the Flatpak disagreed repeatedly. When they do, believe the
+Flatpak: it is the artifact that ships, it bundles its own Qt, and it builds
+clean every time. `~/verify.sh` in WSL builds the tree as a Flatpak, installs it
+over the signed remote copy and screenshots it.
+
+### Blocked on the host, not on us
+
+Streaming from this client fails with `403 — this device lacks the "Launch
+applications" permission`, set per-client in Vibepollo's Client Management. The
+in-stream drawer has therefore never been seen over live video.
+
+
 Chronological war stories from the build sessions. CLAUDE.md carries the
 distilled rules; this file explains *why* each rule exists.
 

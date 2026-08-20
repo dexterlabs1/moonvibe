@@ -6,6 +6,8 @@ Read [docs/PRODUCT.md](docs/PRODUCT.md) (vision, UI spec, roadmap) and
 Pick the next unchecked task in [BACKLOG.md](BACKLOG.md) top to bottom; check it
 off in the same commit. Session war stories with full context:
 [docs/ENGINEERING_NOTES.md](docs/ENGINEERING_NOTES.md).
+Picking this up cold: [docs/HANDOFF.md](docs/HANDOFF.md) — current state,
+what to do next, and the traps that cost real time.
 
 UI mockups (all six target screens, 1280×800):
 https://claude.ai/code/artifact/16b29028-036a-4777-8b59-455f1c2fe70a
