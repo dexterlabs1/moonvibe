@@ -1,0 +1,5 @@
+module Moonvibe
+singleton Theme 1.0 Theme.qml
+Label 2.0 Label.qml
+CheckBox 2.0 CheckBox.qml
+GroupBox 2.0 GroupBox.qml

@@ -49,6 +49,7 @@
 #include "utils.h"
 #include "gui/computermodel.h"
 #include "gui/homemodel.h"
+#include "streaming/streamdrawer.h"
 #include "gui/appmodel.h"
 #include "backend/autoupdatechecker.h"
 #include "backend/computermanager.h"
@@ -982,7 +983,52 @@ int main(int argc, char *argv[])
     // Create the identity manager on the main thread
     IdentityManager::get();
 
-    // We require the Material theme
+    // Our own Qt Quick Controls style. Every control in the app resolves through
+    // it, which is the only way surfaces we have not hand-styled (Settings is
+    // 1800 lines of them) stop looking like stock Qt. Basic is the fallback for
+    // any control the style does not implement -- never Material, whose look is
+    // what we are getting away from.
+    // Renders the in-stream drawer to an image and exits. The drawer draws
+    // itself into an SDL surface rather than QML, so it can be inspected
+    // without a host, a stream, or a working Qt Quick pipeline.
+    if (qEnvironmentVariableIsSet("MOONVIBE_DRAWER_PREVIEW")) {
+        StreamDrawer drawer;
+
+        StreamDrawer::Status status;
+        status.appName = QStringLiteral("Cyber Courier");
+        status.hostName = QStringLiteral("TOWER");
+        status.minutes = 42;
+        status.width = 2560;
+        status.height = 1440;
+        status.fps = 90;
+        status.codec = QStringLiteral("HEVC");
+        status.hdr = true;
+        status.bitrateKbps = 45000;
+        status.latencyMs = 7;
+        status.health = StreamDrawer::Status::HealthGood;
+        status.healthDetail = QStringLiteral("7 ms to TOWER · no dropped frames in 10 min");
+        status.gyroEnabled = true;
+        status.micMuted = true;
+        drawer.setStatus(status);
+        drawer.setOpen(true);
+
+        SDL_Surface* surface = drawer.render(1280, 800);
+        if (surface == nullptr) {
+            fprintf(stderr, "drawer preview: render failed\n");
+            return 1;
+        }
+
+        QByteArray path = qgetenv("MOONVIBE_DRAWER_PREVIEW");
+        int rc = SDL_SaveBMP(surface, path.constData());
+        SDL_FreeSurface(surface);
+        fprintf(stderr, "drawer preview: %s\n", rc == 0 ? "written" : SDL_GetError());
+        return rc == 0 ? 0 : 1;
+    }
+
+    // The Moonvibe style under app/gui/style is written but NOT active: it
+    // has not been cleared of causing a rendering regression, and the
+    // verification harness is currently unreliable. Flip this once a
+    // trustworthy screenshot proves it out.
     QQuickStyle::setStyle("Material");
 
     // Our icons are styled for a dark theme, so we do not allow the user to override this
@@ -1003,6 +1049,8 @@ int main(int argc, char *argv[])
     }
 
     QQmlApplicationEngine engine;
+
+
     QString initialView;
     bool hasGUI = true;
 
