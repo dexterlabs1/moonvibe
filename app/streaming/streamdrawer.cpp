@@ -299,6 +299,22 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
 
     int y = kPad;
 
+    // ---- What you are in ----
+    // The drawer opens over a game you are already playing; naming it first
+    // orients you before any of the controls do.
+    drawText(s, m_FontTitle, m_Status.appName.toUpper(), kPad, y, kText);
+    y += 30;
+
+    QString where = m_Status.hostName;
+    if (m_Status.minutes > 0) {
+        where += QStringLiteral(" · %1 min").arg(m_Status.minutes);
+    }
+    drawText(s, m_FontMicro, where, kPad, y, kTextMuted);
+    y += 26;
+
+    fillRect(s, kPad, y, w - kPad * 2, 1, kLine);
+    y += 18;
+
     // ---- Session ----
     drawSectionLabel(s, QStringLiteral("Session"), kPad, y);
     y += 22;
@@ -333,7 +349,7 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
                           : QStringLiteral("Not keeping up");
     drawText(s, m_FontBody, verdict, kPad + 52, y + 12, healthColor);
     drawText(s, m_FontMicro, m_Status.healthDetail, kPad + 52, y + 34, kTextMuted);
-    y += 84;
+    y += 78;
 
     // ---- Bitrate ----
     drawRowHighlight(s, kPad, y, w - kPad * 2, 58, m_Selected == RowBitrate);
@@ -353,7 +369,7 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
     int knobX = kPad + int((w - kPad * 2) * frac);
     fillRoundedRect(s, knobX - 9, y - 5, 18, 18, 9, kText);
     fillRoundedRect(s, knobX - 6, y - 2, 12, 12, 6, kAccent);
-    y += 40;
+    y += 34;
 
     // ---- Display ----
     drawRowHighlight(s, kPad, y, w - kPad * 2, 58, m_Selected == RowRefresh);
@@ -372,7 +388,7 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
                  active ? kText : kTextMuted);
         px += pw + 8;
     }
-    y += 54;
+    y += 48;
 
     // HDR row
     drawRowHighlight(s, kPad, y, w - kPad * 2, 40, m_Selected == RowHdr);
@@ -385,7 +401,7 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
     fillRoundedRect(s, w - kPad - 58, y + 9, 44, 22, 11, m_Status.hdr ? kAccent : kLineHi);
     fillRoundedRect(s, w - kPad - 58 + (m_Status.hdr ? 24 : 3), y + 12, 16, 16, 8,
                     m_Status.hdr ? kBg : kTextMuted);
-    y += 58;
+    y += 52;
 
     // ---- Input and audio ----
     drawSectionLabel(s, QStringLiteral("Input & audio"), kPad, y);
@@ -404,11 +420,39 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
         const QString state = QString::fromUtf8(t.on ? t.onText : t.offText);
         drawText(s, m_FontLabel, state, w - kPad - 14 - textWidth(m_FontLabel, state), y + 11,
                  t.on ? kOk : kTextFaint);
-        y += 48;
+        y += 44;
     }
 
     // ---- Quit, deliberately held ----
+    // Positioned before the actions are drawn, because the actions have to
+    // yield to it rather than run underneath it on a short window.
     int footerY = h - 92;
+
+    // ---- Actions ----
+    y += 8;
+    drawSectionLabel(s, QStringLiteral("Actions"), kPad, y);
+    y += 24;
+
+    const char* actions[] = {"On-screen keyboard", "Screenshot"};
+    for (const char* label : actions) {
+        // Stop rather than overlap the footer.
+        if (y + 40 > footerY - 34) {
+            break;
+        }
+
+        fillRoundedRect(s, kPad, y, w - kPad * 2, 40, 9, kPanel);
+        strokeRoundedRect(s, kPad, y, w - kPad * 2, 40, 9, 1, kLine);
+        drawText(s, m_FontLabel, QString::fromUtf8(label), kPad + 14, y + 11, kTextMuted);
+
+        // Chevron, drawn rather than a glyph so it recolours with the design.
+        int ax = w - kPad - 24, ay = y + 20;
+        for (int i = 0; i <= 6; i++) {
+            blendPixel(s, ax + i, ay - 6 + i, kTextFaint, 1.0f);
+            blendPixel(s, ax + i, ay + 6 - i, kTextFaint, 1.0f);
+        }
+        y += 46;
+    }
+
     fillRect(s, kPad, footerY - 18, w - kPad * 2, 1, kLine);
 
     // Progress ring, drawn as an arc of short segments.
