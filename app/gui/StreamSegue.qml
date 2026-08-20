@@ -39,7 +39,13 @@ Item {
         stageLabel.visible = false
         hintText.visible = false
 
-        // Hide the window now that streaming has begun
+        // Deliberately NOT hiding the window here. The stream window does not
+        // exist yet at this point -- hiding now shows the desktop until it
+        // appears. streamWindowReady() is the moment it is safe.
+    }
+
+    function streamWindowReady()
+    {
         window.visible = false
     }
 
@@ -115,6 +121,7 @@ Item {
 
         // Hook up our signals
         session.stageStarting.connect(stageStarting)
+        session.streamWindowReady.connect(streamWindowReady)
         session.stageFailed.connect(stageFailed)
         session.connectionStarted.connect(connectionStarted)
         session.displayLaunchError.connect(displayLaunchError)

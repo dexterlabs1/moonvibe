@@ -132,6 +132,11 @@ signals:
 
     void connectionStarted();
 
+    // Raised once the stream window actually exists. The GUI window must
+    // not be hidden before this, or there is nothing on screen between the
+    // two and the desktop shows through.
+    void streamWindowReady();
+
     void displayLaunchError(QString text);
 
     void quitStarting();

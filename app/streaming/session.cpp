@@ -1878,6 +1878,11 @@ void Session::exec()
 
     m_InputHandler->setWindow(m_Window);
 
+    // The stream window is up, so the GUI window can go away without
+    // leaving a gap. Hiding it back at connectionStarted() left the
+    // desktop visible for the whole connection handshake.
+    emit streamWindowReady();
+
     QSvgRenderer svgIconRenderer(QString(":/res/io.github.dexterlabs1.Moonvibe.svg"));
     QImage svgImage(ICON_SIZE, ICON_SIZE, QImage::Format_RGBA8888);
     svgImage.fill(0);
