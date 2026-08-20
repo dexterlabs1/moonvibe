@@ -1025,10 +1025,12 @@ int main(int argc, char *argv[])
         return rc == 0 ? 0 : 1;
     }
 
-    // The Moonvibe style under app/gui/style is written but NOT active: it
-    // has not been cleared of causing a rendering regression, and the
-    // verification harness is currently unreliable. Flip this once a
-    // trustworthy screenshot proves it out.
+    // A custom Qt Quick Controls style lives in app/gui/style/Moonvibe but is
+    // NOT used, and switching it on is not a one-line change -- see
+    // docs/ENGINEERING_NOTES.md. Selecting it by resource path is rejected
+    // ("Style names must not contain paths"), and as a named QML module it
+    // loads with no error at all while the app then never puts a window on
+    // screen. Surfaces are hand-styled instead until that is understood.
     QQuickStyle::setStyle("Material");
 
     // Our icons are styled for a dark theme, so we do not allow the user to override this
@@ -1049,7 +1051,6 @@ int main(int argc, char *argv[])
     }
 
     QQmlApplicationEngine engine;
-
 
     QString initialView;
     bool hasGUI = true;
