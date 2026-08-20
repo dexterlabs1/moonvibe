@@ -147,6 +147,29 @@ make -j$(nproc) release          # binary at ~/build/moonvibe/app/moonvibe
   Root cause: `--no-install-recommends` dropped `elfutils`, so flatpak-builder
   could not find `eu-strip` and died at the libplacebo module.
 
+## The in-stream drawer (how it works)
+
+The drawer CANNOT be QML. Streaming happens in a plain `SDL_CreateWindow`; the
+Qt window is hidden. The only route to the screen over live video is
+`OverlayManager`, which holds one atomic `SDL_Surface*` per overlay type that
+each renderer takes, uploads and blits.
+
+- `app/streaming/streamdrawer.{h,cpp}` renders the panel into an SDL surface: a
+  small software rasteriser (rounded rects with antialiased corners, strokes as
+  true annuli) plus SDL_ttf using the bundled Manrope/Space Grotesk from `:/fonts`.
+- `OverlayDrawer` + `OverlayManager::updateOverlaySurface()` publish it. Nothing
+  in that pipeline was ever text-specific -- it had only ever been given text.
+- Every renderer needs a position case: `sdlvid`, `eglvid` (GL origin is
+  LOWER-LEFT, and it asserts on unknown overlay types), `plvk`, `drm`. The Deck
+  runs plvk/drm under gamescope, so skipping those means it works everywhere
+  except the target device.
+- Input is intercepted in `keyboard.cpp` before anything reaches the host, so a
+  stray arrow press cannot leak into the game while the menu is open.
+
+**Verify it without a stream:** `MOONVIBE_DRAWER_PREVIEW=/tmp/d.bmp ./moonvibe`
+renders the panel and exits. Rendering depends only on the state set on it, so
+this needs no host, no session, and no working Qt Quick pipeline.
+
 ## Things that will bite you
 
 - The gamescope WSI Vulkan layer (`ENABLE_GAMESCOPE_WSI`) is required for HDR

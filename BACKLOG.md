@@ -26,6 +26,13 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
 
 ## P2 — In-stream control
 - [ ] In-stream drawer (Select+L5, configurable): client-side settings, stats tiers, hold-to-quit ring
+  - [x] Surface: StreamDrawer renders the panel into an SDL surface (software rasteriser + SDL_ttf, bundled fonts)
+  - [x] Compositing: OverlayDrawer type + updateOverlaySurface(); positioned in SDL, EGL, Vulkan and DRM renderers
+  - [x] Input: keys swallowed while open, arrows navigate/adjust, Escape closes
+  - [x] Preview harness: MOONVIBE_DRAWER_PREVIEW=<path> renders it without a host or a stream
+  - [ ] Verify over live video (blocked: this client lacks "Launch applications" permission on the host)
+  - [ ] Bind to Select+L5 (needs rebindable shortcuts first)
+  - [ ] Make the controls actually apply (bitrate needs the Vibepollo ABR path; res/HDR need soft reconnect)
 - [ ] Trackpad radial quick actions
 - [ ] Localhost WebSocket control API (session params, stats stream, end-session)
 - [ ] Decky plugin v1: QAM panel with live stats, bitrate, end stream, host wake/sleep
