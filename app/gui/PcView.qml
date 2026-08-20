@@ -333,11 +333,6 @@ CenteredGridView {
             sourceComponent: NavigableMenu {
                 id: pcContextMenu
                 initiator: pcContextMenuLoader.parent
-                MenuItem {
-                    text: qsTr("PC Status: %1").arg(model.online ? qsTr("Online") : qsTr("Offline"))
-                    font.bold: true
-                    enabled: false
-                }
                 NavigableMenuItem {
                     text: qsTr("View All Apps")
                     onTriggered: {

@@ -39,6 +39,14 @@
 	</branding>
 
 	<releases>
+		<release version="0.6.0" date="2026-08-19">
+			<description>
+				<ul>
+					<li>Back to opening on your PCs; the home screen is gone</li>
+					<li>Menus and dialogs rebuilt on the design system</li>
+				</ul>
+			</description>
+		</release>
 		<release version="0.5.0" date="2026-08-19">
 			<description>
 				<p>A new home screen. Moonvibe no longer opens on a list of PCs:</p>

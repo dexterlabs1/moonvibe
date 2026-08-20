@@ -29,6 +29,36 @@ QtObject {
     readonly property string fontBody: "Manrope"
     readonly property string fontDisplay: "Space Grotesk"
 
+    // Surfaces that float above the page: menus, dialogs, drawers.
+    readonly property color floatBg: "#191c2b"
+    readonly property color scrim: "#C004050A"
+
+    // Spacing scale. Everything spatial picks from this rather than inventing
+    // a number, which is what keeps unrelated screens feeling related.
+    readonly property int sp1: 4
+    readonly property int sp2: 8
+    readonly property int sp3: 12
+    readonly property int sp4: 16
+    readonly property int sp5: 24
+    readonly property int sp6: 32
+    readonly property int sp7: 56
+
+    // Type ramp. Display is Space Grotesk and always uppercase with tracking;
+    // body is Manrope.
+    readonly property int fsDisplay: 40
+    readonly property int fsTitle: 22
+    readonly property int fsBody: 15
+    readonly property int fsLabel: 13
+    readonly property int fsMicro: 11
+
+    // Anything a thumb has to hit. The Deck is held at arm's length, so this
+    // is a floor, not a target.
+    readonly property int rowHeight: 52
+    readonly property int controlHeight: 44
+
+    readonly property int durFast: 110
+    readonly property int durBase: 180
+
     readonly property int cardRadius: 12
     readonly property int capsuleRadius: 10
 

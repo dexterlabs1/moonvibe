@@ -2,7 +2,7 @@
     {
         "platform": "appimage",
         "arch": "x86_64",
-        "version": "0.5.0",
+        "version": "0.6.0",
         "browser_url": "https://github.com/dexterlabs1/moonvibe/releases"
     }
 ]

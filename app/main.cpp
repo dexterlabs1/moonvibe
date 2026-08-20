@@ -1008,10 +1008,7 @@ int main(int argc, char *argv[])
 
     switch (commandLineParserResult) {
     case GlobalCommandLineParser::NormalStartRequested:
-        // The home screen, not the PC list: a host is a property of a game
-        // here, not the first thing you have to choose. PcView is still
-        // reachable from it.
-        initialView = "qrc:/gui/HomeView.qml";
+        initialView = "qrc:/gui/PcView.qml";
         break;
     case GlobalCommandLineParser::StreamRequested:
         {
