@@ -12,6 +12,7 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
 - [ ] Make repo public (GPLv3 gate: required before distributing any build)
 
 ## P1 — Deck-first UI shell
+- [x] Home screen replaces the host list as the entry point: cross-host recents, one adaptive primary action that absorbs wake/pair, library as a shelf
 - [x] Dark theme shell v1 (v0.2.0): Theme singleton, wordmark top bar, footer controller-glyph hints, host status cards, app capsules with monogram placeholders + running badge, dark dialogs
 - [x] New QML shell: home/library per mockups (Continue hero row of recently played apps above the capsule grid, footer glyph hints, focus moves between the two)
 - [ ] 100% controller-complete navigation (audit every dialog; single spatial-nav system)

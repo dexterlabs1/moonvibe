@@ -39,6 +39,16 @@
 	</branding>
 
 	<releases>
+		<release version="0.5.0" date="2026-08-19">
+			<description>
+				<p>A new home screen. Moonvibe no longer opens on a list of PCs:</p>
+				<ul>
+					<li>Opens on what you would most likely play, across every PC</li>
+					<li>A sleeping or unpaired PC is handled by the same button, not a separate screen</li>
+					<li>Your library is a shelf underneath rather than a second screen</li>
+				</ul>
+			</description>
+		</release>
 		<release version="0.4.0" date="2026-08-19">
 			<description>
 				<p>The Deck-first interface, rebuilt to the design:</p>

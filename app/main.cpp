@@ -48,6 +48,7 @@
 #include "path.h"
 #include "utils.h"
 #include "gui/computermodel.h"
+#include "gui/homemodel.h"
 #include "gui/appmodel.h"
 #include "backend/autoupdatechecker.h"
 #include "backend/computermanager.h"
@@ -950,6 +951,7 @@ int main(int argc, char *argv[])
     // Register our C++ types for QML
     qmlRegisterType<ComputerModel>("ComputerModel", 1, 0, "ComputerModel");
     qmlRegisterType<AppModel>("AppModel", 1, 0, "AppModel");
+    qmlRegisterType<HomeModel>("HomeModel", 1, 0, "HomeModel");
     qmlRegisterUncreatableType<Session>("Session", 1, 0, "Session", "Session cannot be created from QML");
     qmlRegisterSingletonType<ComputerManager>("ComputerManager", 1, 0,
                                               "ComputerManager",
@@ -1006,7 +1008,10 @@ int main(int argc, char *argv[])
 
     switch (commandLineParserResult) {
     case GlobalCommandLineParser::NormalStartRequested:
-        initialView = "qrc:/gui/PcView.qml";
+        // The home screen, not the PC list: a host is a property of a game
+        // here, not the first thing you have to choose. PcView is still
+        // reachable from it.
+        initialView = "qrc:/gui/HomeView.qml";
         break;
     case GlobalCommandLineParser::StreamRequested:
         {

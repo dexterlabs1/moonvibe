@@ -23,6 +23,17 @@ ApplicationWindow {
     height: 800
     color: Theme.bg
 
+    // Soft glow behind the top of the window, per the design. Keeps a
+    // full-bleed dark UI from reading as a flat black rectangle.
+    Rectangle {
+        anchors.fill: parent
+        z: -1
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Theme.topGlow }
+            GradientStop { position: 0.55; color: Theme.bg }
+        }
+    }
+
     Material.theme: Material.Dark
     Material.accent: Theme.accent
     Material.background: Theme.panel

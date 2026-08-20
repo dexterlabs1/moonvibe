@@ -16,7 +16,11 @@ class ComputerModel : public QAbstractListModel
         WakeableRole,
         StatusUnknownRole,
         ServerSupportedRole,
-        DetailsRole
+        DetailsRole,
+        AppCountRole,
+        RunningAppRole,
+        ServerLabelRole,
+        AddressLabelRole
     };
 
 public:

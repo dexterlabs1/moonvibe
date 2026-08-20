@@ -15,9 +15,9 @@ CenteredGridView {
     id: pcGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 24
+    topMargin: 6
     bottomMargin: 5
-    cellWidth: 330; cellHeight: 172;
+    cellWidth: 400; cellHeight: 210;
     objectName: qsTr("Hosts")
 
     property var navHints: [
@@ -124,72 +124,208 @@ CenteredGridView {
         }
     }
 
+    header: Item {
+        width: pcGrid.width
+        height: 40
+
+        Row {
+            anchors.left: parent.left
+            anchors.leftMargin: pcGrid.horizontalMargin
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 12
+
+            Text {
+                text: qsTr("YOUR PCS")
+                color: Theme.textMuted
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                font.weight: Font.ExtraBold
+                font.letterSpacing: 1.9
+            }
+
+            Text {
+                text: pcGrid.count
+                color: Theme.textFaint
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                font.weight: Font.Bold
+            }
+        }
+    }
+
     model: computerModel
 
     delegate: NavigableItemDelegate {
-        width: 310; height: 152;
+        id: pcCard
+
+        width: 380; height: 190;
+        padding: 0
         grid: pcGrid
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
-        background: Rectangle {
-            radius: Theme.cardRadius
-            color: highlighted ? Theme.panelHi : Theme.panel
-            border.color: highlighted ? Theme.accent : Theme.line
-            border.width: highlighted ? 2 : 1
+        readonly property bool isBusy: model.statusUnknown
+        readonly property bool needsPairing: model.online && !model.paired
+        readonly property bool canWake: !model.online && !model.statusUnknown && model.wakeable
+
+        // Drawn below, so no delegate chrome of its own.
+        background: Item {}
+
+        // Focus glow, matching the library capsules.
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -5
+            radius: Theme.cardRadius + 5
+            color: "transparent"
+            border.color: Theme.accent
+            border.width: 5
+            opacity: pcCard.highlighted ? 0.18 : 0
+            Behavior on opacity { NumberAnimation { duration: 110 } }
         }
 
-        Column {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 20
-            anchors.rightMargin: 20
-            spacing: 8
+        Rectangle {
+            anchors.fill: parent
+            radius: Theme.cardRadius
+            color: Theme.panel
+            border.color: pcCard.highlighted ? Theme.accent : Theme.line
+            border.width: pcCard.highlighted ? 2 : 1
+            clip: true
 
-            Row {
-                spacing: 10
-
-                Rectangle {
-                    width: 10
-                    height: 10
-                    radius: 5
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: model.statusUnknown ? Theme.textFaint
-                         : !model.online ? Theme.textFaint
-                         : !model.paired ? Theme.warn
-                         : Theme.ok
+            // A wash of the status colour, so state reads before any text does.
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 1
+                gradient: Gradient {
+                    GradientStop {
+                        position: 0.0
+                        color: pcCard.isBusy ? "#141726"
+                             : !model.online ? "#12131d"
+                             : pcCard.needsPairing ? "#241f14"
+                             : "#12211a"
+                    }
+                    GradientStop { position: 1.0; color: Theme.panel }
                 }
+            }
 
-                Label {
-                    text: model.name
+            // Status chip
+            Rectangle {
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: 14
+                height: 24
+                width: statusRow.width + 20
+                radius: 12
+                color: "#B8080a10"
+                border.width: 1
+                border.color: pcCard.isBusy ? Theme.lineHi
+                            : !model.online ? Theme.lineHi
+                            : pcCard.needsPairing ? Theme.warn
+                            : Theme.ok
+
+                Row {
+                    id: statusRow
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    Rectangle {
+                        width: 7; height: 7; radius: 3.5
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: pcCard.isBusy ? Theme.textFaint
+                             : !model.online ? Theme.textFaint
+                             : pcCard.needsPairing ? Theme.warn
+                             : Theme.ok
+                    }
+
+                    Text {
+                        text: pcCard.isBusy ? qsTr("CHECKING")
+                            : !model.online ? qsTr("OFFLINE")
+                            : pcCard.needsPairing ? qsTr("NEEDS PAIRING")
+                            : qsTr("READY")
+                        color: pcCard.isBusy ? Theme.textMuted
+                             : !model.online ? Theme.textMuted
+                             : pcCard.needsPairing ? Theme.warn
+                             : Theme.ok
+                        font.family: Theme.fontBody
+                        font.pixelSize: 10
+                        font.weight: Font.ExtraBold
+                        font.letterSpacing: 0.8
+                    }
+                }
+            }
+
+            Column {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 18
+                spacing: 7
+
+                Text {
+                    width: parent.width
+                    text: model.name.toUpperCase()
                     color: Theme.textColor
-                    font.pointSize: 17
-                    font.bold: true
-                    width: 220
+                    font.family: Theme.fontDisplay
+                    font.pixelSize: 26
+                    font.weight: Font.Bold
+                    font.letterSpacing: 1
                     elide: Text.ElideRight
                 }
 
-                BusyIndicator {
-                    width: 22
-                    height: 22
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: model.statusUnknown
-                    running: visible
+                // What this machine is actually doing, rather than a repeat of
+                // the status chip.
+                Text {
+                    width: parent.width
+                    text: model.runningApp ? qsTr("%1 is running").arg(model.runningApp)
+                        : pcCard.needsPairing ? qsTr("Select to pair with this PC")
+                        : pcCard.canWake ? qsTr("Asleep - press X to wake")
+                        : !model.online ? qsTr("Not reachable on this network")
+                        : pcCard.isBusy ? qsTr("Checking if it is awake")
+                        : model.appCount > 0 ? qsTr("%1 games").arg(model.appCount)
+                        : qsTr("Ready to stream")
+                    color: model.runningApp ? Theme.ok
+                         : pcCard.needsPairing ? Theme.warn
+                         : Theme.textMuted
+                    font.family: Theme.fontBody
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    width: parent.width
+                    text: model.addressLabel
+                          ? model.addressLabel + "  ·  " + model.serverLabel
+                          : model.serverLabel
+                    color: Theme.textFaint
+                    font.family: Theme.fontBody
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
                 }
             }
 
-            Label {
-                text: model.statusUnknown ? qsTr("Connecting…")
-                    : !model.online ? (model.wakeable ? qsTr("Offline — press X to wake") : qsTr("Offline"))
-                    : !model.paired ? qsTr("Online — select to pair")
-                    : qsTr("Online · Paired")
-                color: model.online && model.paired ? Theme.textMuted
-                     : model.online ? Theme.warn : Theme.textFaint
-                font.pointSize: 11
-                font.bold: true
+            BusyIndicator {
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.margins: 14
+                width: 22
+                height: 22
+                visible: pcCard.isBusy
+                running: visible
             }
         }
+
+        // Rectangle.clip does not round its children; paint a ring in the page
+        // background colour over the corners. Inset to keep the focus border.
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: pcCard.highlighted ? 2 : 1
+            radius: Theme.cardRadius
+            color: "transparent"
+            border.color: Theme.bg
+            border.width: 3
+        }
+
 
         Loader {
             id: pcContextMenuLoader

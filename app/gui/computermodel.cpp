@@ -82,6 +82,36 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
                tr("Running Game ID: %1").arg(computer->state == NvComputer::CS_ONLINE ? QString::number(computer->currentGameId) : tr("Unknown")) + '\n' +
                tr("HTTPS Port: %1").arg(computer->state == NvComputer::CS_ONLINE ? QString::number(computer->activeHttpsPort) : tr("Unknown"));
     }
+    case AppCountRole:
+        return computer->appList.count();
+    case RunningAppRole: {
+        // Name of whatever is running on the host right now, so the host card
+        // can say what it is busy with instead of only that it is busy.
+        if (computer->state != NvComputer::CS_ONLINE || computer->currentGameId == 0) {
+            return QString();
+        }
+        for (const NvApp& app : computer->appList) {
+            if (app.id == computer->currentGameId) {
+                return app.name;
+            }
+        }
+        // Paired but the app list has not arrived yet, or the running app is
+        // hidden from the list.
+        return tr("a game");
+    }
+    case ServerLabelRole:
+        // Which host software this is. Sunshine-family hosts report a GfeVersion
+        // for compatibility but are not GeForce Experience, so the Nvidia flag is
+        // the only reliable discriminator we have.
+        return computer->isNvidiaServerSoftware ? QStringLiteral("GeForce Experience")
+                                                : QStringLiteral("Sunshine");
+    case AddressLabelRole: {
+        QString address = computer->activeAddress.address();
+        if (address.isEmpty()) {
+            address = computer->localAddress.address();
+        }
+        return address;
+    }
     default:
         return QVariant();
     }
@@ -110,6 +140,10 @@ QHash<int, QByteArray> ComputerModel::roleNames() const
     names[StatusUnknownRole] = "statusUnknown";
     names[ServerSupportedRole] = "serverSupported";
     names[DetailsRole] = "details";
+    names[AppCountRole] = "appCount";
+    names[RunningAppRole] = "runningApp";
+    names[ServerLabelRole] = "serverLabel";
+    names[AddressLabelRole] = "addressLabel";
 
     return names;
 }
