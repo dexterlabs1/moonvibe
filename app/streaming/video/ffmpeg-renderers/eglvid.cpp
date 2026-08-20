@@ -213,6 +213,11 @@ void EGLRenderer::renderOverlay(Overlay::OverlayType type, int viewportWidth, in
             // Top left
             overlayRect.x = 0;
             overlayRect.y = viewportHeight - newSurface->h;
+        }
+        else if (type == Overlay::OverlayDrawer) {
+            // Right edge, full height. The drawer is a panel, not a label.
+            overlayRect.x = viewportWidth - newSurface->w;
+            overlayRect.y = viewportHeight - newSurface->h;
         } else {
             SDL_assert(false);
         }

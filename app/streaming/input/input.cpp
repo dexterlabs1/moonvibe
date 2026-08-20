@@ -95,6 +95,14 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     m_SpecialKeyCombos[KeyComboToggleFullScreen].scanCode = SDL_SCANCODE_X;
     m_SpecialKeyCombos[KeyComboToggleFullScreen].enabled = WMUtils::isRunningDesktopEnvironment();
 
+    // The in-stream drawer. This is a placeholder binding: the drawer is
+    // meant to open on Select+L5 on a Deck, which needs the rebindable
+    // shortcut work before it can be expressed here.
+    m_SpecialKeyCombos[KeyComboToggleDrawer].keyCombo = KeyComboToggleDrawer;
+    m_SpecialKeyCombos[KeyComboToggleDrawer].keyCode = SDLK_d;
+    m_SpecialKeyCombos[KeyComboToggleDrawer].scanCode = SDL_SCANCODE_D;
+    m_SpecialKeyCombos[KeyComboToggleDrawer].enabled = true;
+
     m_SpecialKeyCombos[KeyComboToggleStatsOverlay].keyCombo = KeyComboToggleStatsOverlay;
     m_SpecialKeyCombos[KeyComboToggleStatsOverlay].keyCode = SDLK_s;
     m_SpecialKeyCombos[KeyComboToggleStatsOverlay].scanCode = SDL_SCANCODE_S;

@@ -10,6 +10,7 @@
 #include "video/decoder.h"
 #include "audio/renderers/renderer.h"
 #include "video/overlaymanager.h"
+#include "streamdrawer.h"
 
 class SupportedVideoFormatList : public QList<int>
 {
@@ -115,6 +116,16 @@ public:
     {
         return s_ActiveSession;
     }
+
+    // Opens or closes the in-stream drawer and republishes its surface.
+    void toggleDrawer();
+
+    bool isDrawerOpen() { return m_Drawer.isOpen(); }
+
+    StreamDrawer& getDrawer() { return m_Drawer; }
+
+    // Redraws the drawer, e.g. after a value changes or the window resizes.
+    void refreshDrawer();
 
     Overlay::OverlayManager& getOverlayManager()
     {
@@ -286,6 +297,7 @@ private:
     Uint32 m_DropAudioEndTime;
 
     Overlay::OverlayManager m_OverlayManager;
+    StreamDrawer m_Drawer;
 
     static CONNECTION_LISTENER_CALLBACKS k_ConnCallbacks;
     static Session* s_ActiveSession;

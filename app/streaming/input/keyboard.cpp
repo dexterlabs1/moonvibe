@@ -49,6 +49,12 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
         raiseAllKeys();
         break;
 
+    case KeyComboToggleDrawer:
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Detected drawer toggle combo");
+        Session::get()->toggleDrawer();
+        break;
+
     case KeyComboToggleStatsOverlay:
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected stats toggle combo");
@@ -182,6 +188,42 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
     if (event->repeat) {
         // Ignore repeat key down events
         SDL_assert(event->state == SDL_PRESSED);
+        return;
+    }
+
+    // While the drawer is open it owns navigation, and the game must not see
+    // these keys at all -- a stray arrow press reaching the host mid-menu is
+    // exactly the kind of thing that makes an in-stream overlay feel unsafe.
+    // Modifier combos still fall through so the quit and toggle chords work.
+    if (Session::get()->isDrawerOpen() &&
+            !(event->keysym.mod & (KMOD_CTRL | KMOD_ALT))) {
+        if (event->state == SDL_PRESSED) {
+            StreamDrawer& drawer = Session::get()->getDrawer();
+
+            switch (event->keysym.sym) {
+            case SDLK_UP:
+                drawer.moveUp();
+                break;
+            case SDLK_DOWN:
+                drawer.moveDown();
+                break;
+            case SDLK_LEFT:
+                drawer.adjustLeft();
+                break;
+            case SDLK_RIGHT:
+                drawer.adjustRight();
+                break;
+            case SDLK_ESCAPE:
+                Session::get()->toggleDrawer();
+                return;
+            default:
+                // Swallowed rather than forwarded: the drawer has focus.
+                return;
+            }
+
+            Session::get()->refreshDrawer();
+        }
+
         return;
     }
 

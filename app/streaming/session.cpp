@@ -1502,6 +1502,44 @@ void Session::updateOptimalWindowDisplayMode()
     SDL_SetWindowDisplayMode(m_Window, &bestMode);
 }
 
+
+void Session::toggleDrawer()
+{
+    m_Drawer.toggle();
+    m_OverlayManager.setOverlayState(Overlay::OverlayDrawer, m_Drawer.isOpen());
+    refreshDrawer();
+}
+
+void Session::refreshDrawer()
+{
+    if (!m_Drawer.isOpen()) {
+        m_OverlayManager.updateOverlaySurface(Overlay::OverlayDrawer, nullptr);
+        return;
+    }
+
+    int width = 1280, height = 800;
+    if (m_Window != nullptr) {
+        SDL_GetWindowSize(m_Window, &width, &height);
+    }
+
+    // Everything the drawer reports comes from the session it is drawn over.
+    StreamDrawer::Status status = m_Drawer.status();
+    status.appName = m_App.name;
+    status.hostName = m_Computer->name;
+    status.width = m_ActiveVideoWidth;
+    status.height = m_ActiveVideoHeight;
+    status.fps = m_ActiveVideoFrameRate;
+    status.bitrateKbps = m_StreamConfig.bitrate;
+    status.hdr = m_StreamConfig.supportedVideoFormats & VIDEO_FORMAT_MASK_10BIT;
+    status.codec = (m_ActiveVideoFormat & VIDEO_FORMAT_MASK_AV1)  ? QStringLiteral("AV1")
+                 : (m_ActiveVideoFormat & VIDEO_FORMAT_MASK_H265) ? QStringLiteral("HEVC")
+                                                                  : QStringLiteral("H.264");
+    m_Drawer.setStatus(status);
+
+    m_OverlayManager.updateOverlaySurface(Overlay::OverlayDrawer,
+                                          m_Drawer.render(width, height));
+}
+
 void Session::toggleFullscreen()
 {
     bool fullScreen = !(SDL_GetWindowFlags(m_Window) & m_FullScreenFlag);

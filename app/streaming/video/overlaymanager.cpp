@@ -81,6 +81,22 @@ SDL_Surface* OverlayManager::getUpdatedOverlaySurface(OverlayType type)
     return (SDL_Surface*)SDL_AtomicSetPtr((void**)&m_Overlays[type].surface, nullptr);
 }
 
+void OverlayManager::updateOverlaySurface(OverlayType type, SDL_Surface* surface)
+{
+    // Same exchange the text path uses: swap the new surface in, tell the
+    // renderer, then free whatever it had not collected yet.
+    SDL_Surface* oldSurface = (SDL_Surface*)SDL_AtomicSetPtr(
+        (void**)&m_Overlays[type].surface, surface);
+
+    if (m_Renderer != nullptr) {
+        m_Renderer->notifyOverlayUpdated(type);
+    }
+
+    if (oldSurface != nullptr) {
+        SDL_FreeSurface(oldSurface);
+    }
+}
+
 void OverlayManager::setOverlayTextUpdated(OverlayType type)
 {
     // Only update the overlay state if it's enabled. If it's not enabled,
