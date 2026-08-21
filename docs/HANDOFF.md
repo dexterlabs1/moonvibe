@@ -1,4 +1,4 @@
-# Handoff — 2026-08-20
+# Handoff — 2026-08-20 (updated end of Fable session)
 
 State of Moonvibe at the end of the Opus session, for whoever picks this up next.
 Read [ENGINEERING_NOTES.md](ENGINEERING_NOTES.md) first if anything below looks
@@ -7,8 +7,10 @@ surprising — the traps are recorded there.
 ## Where things stand
 
 - `main` is pushed and clean. Working tree has no uncommitted changes.
-- **The Deck runs 0.6.0.** Everything after that (the in-stream drawer) is on
-  `main` but unreleased.
+- **The Deck runs 0.6.0.** Everything after that is on `main` but UNRELEASED:
+  the in-stream drawer, rebindable shortcuts (+ Select+L5 drawer chord), and
+  the Settings redesign. Next release = **0.7.0**, gated only on the owner's
+  visual sign-off of Settings on WSLg (launched for them at session end).
 - Releases: v0.6.0, v0.5.0, v0.4.0, v0.3.0, v0.1.0.
 - Repo is **public**. Flatpak repo at <https://dexterlabs1.github.io/moonvibe/>,
   GPG-signed, and the Deck installs from it — so updates arrive in Discover.
@@ -25,7 +27,9 @@ surprising — the traps are recorded there.
 | Menus and dialogs rebuilt on the design system | Shipped in 0.6.0 |
 | Desktop-flash-on-launch fix | Shipped in 0.6.0 |
 | In-stream drawer | On `main`, **unreleased and unverified over video** |
-| Custom Qt Quick Controls style | Written, tracked, **does not work** — see notes |
+| Rebindable shortcuts (`app/settings/keybindings.*`) | On `main`; all chords settings-backed, defaults bit-for-bit; drawer on Select+L5; QML API ready, **no UI yet** |
+| SettingsView redesign (SettingsSection + Mv* components) | On `main`; presentation-only (171 bindings / qsTr set identical); OSK bug fixed via press-to-edit field |
+| Custom Qt Quick Controls style | Written, tracked, **does not work** — see notes. Superseded by hand-styling; do not retry without a new idea |
 
 ## Do these next, in this order
 
@@ -41,20 +45,30 @@ surprising — the traps are recorded there.
    resolution/HDR need a soft reconnect that reuses pairing and restarts only
    RTSP/RTP.
 
-3. **Rebindable shortcuts.** The user asked for this directly. The drawer toggle
-   is currently `Ctrl+Alt+Shift+D`, a placeholder — it belongs on Select+L5 on a
-   Deck. Do not hardcode a gamepad chord; build the bindings store first, then
-   express the drawer toggle through it. Quit is hardcoded today too.
+3. **Shortcut-rebinding UI.** Backend done (`KeyBindings` QML singleton:
+   `actions()`, `setBinding(id, str)` → "" or error, `resetOne`, `resetAll`;
+   the gamepad chord is a 13th row flagged `gamepad: true`). Build the page as a
+   `SettingsSection` in the new Settings using the Mv* components. Capture a
+   chord by listening for the next key press, not by typing strings.
 
-4. **SettingsView.** 1800 lines of stock Qt and the biggest remaining surface
-   that still reads as moonlight. Hand-style it (custom section/checkbox/combo
-   components) rather than waiting on the global style.
+4. **Cut 0.7.0** once the owner confirms Settings renders right (see
+   "Verification" below). Release flow is manual: `~/verify.sh`-style flatpak
+   build in WSL, sign with the key in `~/.gnupg-moonvibe`, push gh-pages, gh
+   release. Every prior release in git history shows the exact commands.
 
-5. **The keyboard-on-app-options bug** the user reported, still unreproduced. Two
-   things would pin it down: does it happen in Desktop Mode as well as Gaming
-   Mode, and is it the X → App options menu or the gear/Settings screen? If it is
-   Settings, the SteamGridDB API key `TextField` added to Host Settings is the
-   likely cause and should not take focus.
+5. **Keyboard-popup bug**: fixed on the Settings side (SteamGridDB field is
+   press-to-edit; dialog fields no longer self-focus). If it still happens in the
+   X → App options menu, that is a different cause — `PcView.qml`'s
+   `renamePcDialog` still has `editText { focus: true }` (dialog-scoped, likely
+   fine).
+
+## Verification, the rule
+
+Build locally in WSL, launch with WSLg so the window lands on the owner's
+Windows desktop, and ASK THEM WHAT THEY SEE. Headless pixels lie; app text
+logs (component-load failures, ReferenceError) and qmllint do not. Builders
+work in their own build dirs (`~/build/mv-*`) and never commit — Fable reviews
+and commits by territory.
 
 ## Traps that will cost you time if you do not know them
 

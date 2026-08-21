@@ -16,6 +16,9 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
 - [x] Dark theme shell v1 (v0.2.0): Theme singleton, wordmark top bar, footer controller-glyph hints, host status cards, app capsules with monogram placeholders + running badge, dark dialogs
 - [x] New QML shell: home/library per mockups (Continue hero row of recently played apps above the capsule grid, footer glyph hints, focus moves between the two)
 - [ ] 100% controller-complete navigation (audit every dialog; single spatial-nav system)
+- [x] Settings rebuilt on the design system (SettingsSection, MvCheckBox/ComboBox/Slider/TextField); SteamGridDB field press-to-edit so the OSK cannot ambush
+- [x] Rebindable in-stream shortcuts backend (KeyBindings, QSettings, QML API); defaults preserved bit-for-bit
+- [ ] Shortcut-rebinding UI in Settings
 - [ ] Pairing wizard: discovery → OTP/PIN pad (no OS keyboard) → bandwidth probe → defaults
   - [x] PIN step: host name, PIN in large tiles, deep link to the host web UI, waiting state
   - [ ] OTP pairing for Apollo/Vibepollo hosts
@@ -31,7 +34,7 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
   - [x] Input: keys swallowed while open, arrows navigate/adjust, Escape closes
   - [x] Preview harness: MOONVIBE_DRAWER_PREVIEW=<path> renders it without a host or a stream
   - [ ] Verify over live video (blocked: this client lacks "Launch applications" permission on the host)
-  - [ ] Bind to Select+L5 (needs rebindable shortcuts first)
+  - [x] Bind to Select+L5 (configurable gamepad chord; d-pad navigates, B closes)
   - [ ] Make the controls actually apply (bitrate needs the Vibepollo ABR path; res/HDR need soft reconnect)
 - [ ] Trackpad radial quick actions
 - [ ] Localhost WebSocket control API (session params, stats stream, end-session)
