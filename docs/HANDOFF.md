@@ -1,4 +1,4 @@
-# Handoff — 2026-08-20 (updated end of Fable session)
+# Handoff — 2026-08-27 (updated end of Fable session)
 
 State of Moonvibe at the end of the Opus session, for whoever picks this up next.
 Read [ENGINEERING_NOTES.md](ENGINEERING_NOTES.md) first if anything below looks
@@ -51,19 +51,11 @@ surprising — the traps are recorded there.
    `SettingsSection` in the new Settings using the Mv* components. Capture a
    chord by listening for the next key press, not by typing strings.
 
-4. **Fix what the first review run found** (2026-08-27, all reproducible with
-   `tools/shoot/review.sh`; full list in `lint.json`):
-   - Settings body text is 16px and the toolbar's version label is 10pt
-     `Sans Serif` — the type ramp stops at the surfaces nobody hand-styled.
-   - Secondary text on host cards ("10.0.0.31 · Sunshine") sits at ~2.2:1
-     against the card. `Theme.textFaint` is too faint on `Theme.panel`.
-   - "Enable mouse control with gamepads…" needs 559px in a 548px slot and does
-     not elide, so the label is cut.
-   - Settings content runs under the header and the footer with no padding or
-     fade; a checkbox row is sliced in half at the bottom edge.
-   - The host screen leaves ~500px of empty space below a single row of cards.
-   - The drawer's bitrate slider paints a stray mark outside the panel's left
-     padding.
+4. **Design debt from the review harness** — the first pass landed 2026-08-27
+   (36 errors → 0; 427 warnings → 97). What is left is in BACKLOG.md under
+   "Design debt": the library grid under the footer, library type off-ramp,
+   scrim tokens, and stock `DialogButtonBox` buttons. `Theme.fsBody` is now 16
+   (PRODUCT.md's floor); the ramp is [11, 13, 16, 22, 40].
 
 5. **Cut 0.7.0** once the owner confirms Settings renders right (see
    "Verification" below). Release flow is manual: `~/verify.sh`-style flatpak

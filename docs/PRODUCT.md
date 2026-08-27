@@ -83,7 +83,7 @@ gamescope, E2E encryption, 5.1/7.1 audio, WoL, pairing with stock Sunshine.
 ### 3.1 Design language
 
 - **Dark, OLED-first**: near-black `#0e0e12` base (dome-style true blacks),
-  soft indigo/moonlight accent, Valve-adjacent typography sizes (min 16 px
+  soft indigo/moonlight accent, Valve-adjacent typography sizes (`Theme.fsBody` = 16 px minimum
   body at 1280×800 — XBPlay's small fonts are the cautionary tale).
 - **SteamOS-native idioms**: persistent footer with controller glyph hints
   (`Ⓐ Select · Ⓑ Back · Ⓧ Options · ☰ Menu`), right-side slide-in drawers,

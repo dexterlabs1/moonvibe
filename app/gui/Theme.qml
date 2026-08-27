@@ -11,7 +11,16 @@ QtObject {
     readonly property color lineHi: "#2a2e45"
     readonly property color textColor: "#eceef8"
     readonly property color textMuted: "#8b91ad"
-    readonly property color textFaint: "#4b5069"
+
+    // The third tier of text: address lines, counts, captions. It used to be
+    // #4b5069, which measured 2.2:1 on Theme.panel -- decorative, not readable.
+    // Lifted until it clears 4.5:1 on every surface it lands on (4.9:1 on
+    // panel, 4.7:1 on floatBg, 5.3:1 on bg) while staying a step below muted.
+    readonly property color textFaint: "#7f86a2"
+
+    // What a control that cannot be used looks like. This is the old textFaint
+    // value, kept for the one job where receding is the point.
+    readonly property color textDisabled: "#4b5069"
     readonly property color accent: "#8fa6ff"
     readonly property color accentDeep: "#5f79e8"
     readonly property color ok: "#5bd58c"
@@ -47,7 +56,7 @@ QtObject {
     // body is Manrope.
     readonly property int fsDisplay: 40
     readonly property int fsTitle: 22
-    readonly property int fsBody: 15
+    readonly property int fsBody: 16
     readonly property int fsLabel: 13
     readonly property int fsMicro: 11
 
@@ -61,6 +70,16 @@ QtObject {
 
     readonly property int cardRadius: 12
     readonly property int capsuleRadius: 10
+
+    // Small controls -- the checkbox box, anything about the size of a glyph.
+    // capsuleRadius on a 24px square reads as a lozenge rather than a square
+    // with softened corners, which is why this step exists.
+    readonly property int controlRadius: 8
+
+    // Icons inside toolbar buttons and rows. Sized once here because the
+    // buttons no longer inherit a size from the Material background they used
+    // to borrow it from.
+    readonly property int iconSize: 30
 
     // Library capsule geometry: 2:3, the Steam capsule aspect.
     readonly property int capsuleWidth: 152

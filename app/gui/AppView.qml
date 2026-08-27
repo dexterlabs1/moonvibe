@@ -132,7 +132,7 @@ FocusScope {
                 text: qsTr("CONTINUE")
                 color: Theme.textMuted
                 font.family: Theme.fontBody
-                font.pixelSize: 12
+                font.pixelSize: Theme.fsMicro
                 font.weight: Font.ExtraBold
                 font.letterSpacing: 1.9
             }
@@ -198,7 +198,7 @@ FocusScope {
                 text: qsTr("ALL GAMES")
                 color: Theme.textMuted
                 font.family: Theme.fontBody
-                font.pixelSize: 12
+                font.pixelSize: Theme.fsMicro
                 font.weight: Font.ExtraBold
                 font.letterSpacing: 1.9
             }
@@ -207,7 +207,7 @@ FocusScope {
                 text: appGrid.count
                 color: Theme.textFaint
                 font.family: Theme.fontBody
-                font.pixelSize: 12
+                font.pixelSize: Theme.fsMicro
                 font.weight: Font.Bold
             }
 
@@ -353,6 +353,7 @@ FocusScope {
                         anchors.bottom: parent.bottom
                         anchors.margins: 1
                         height: titleText.height + 18
+                        color: Theme.bg
                         gradient: Gradient {
                             GradientStop { position: 0.0; color: "#00080a0e" }
                             GradientStop { position: 1.0; color: "#EB080a0e" }
@@ -570,7 +571,7 @@ FocusScope {
                 }
             }
 
-            ScrollBar.vertical: ScrollBar {}
+            ScrollBar.vertical: MvScrollBar {}
         }
     }
 

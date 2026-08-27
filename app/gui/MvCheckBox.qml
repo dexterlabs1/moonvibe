@@ -20,18 +20,19 @@ CheckBox {
     spacing: Theme.sp3
 
     font.family: Theme.fontBody
-    font.pixelSize: 16
+    font.pixelSize: Theme.fsBody
     font.weight: Font.DemiBold
 
     // A long label wraps rather than eliding — these are sentences, and half of
-    // one tells the user nothing.
+    // one tells the user nothing. The row grows to hold the second line; past
+    // two lines the label is too long to be a checkbox and elides.
     implicitHeight: Math.max(Theme.rowHeight,
                              implicitContentHeight + topPadding + bottomPadding)
 
     // Focus and hover are deliberately the same state: the Deck has no cursor,
     // so a separate hover treatment would only ever be seen with a mouse.
     background: Rectangle {
-        radius: 10
+        radius: Theme.capsuleRadius
         color: control.activeFocus || control.hovered ? Theme.panelHi : "transparent"
 
         Rectangle {
@@ -51,7 +52,7 @@ CheckBox {
         y: control.topPadding + (control.availableHeight - height) / 2
         implicitWidth: 24
         implicitHeight: 24
-        radius: 7
+        radius: Theme.controlRadius
 
         color: !control.checked ? "transparent"
              : control.enabled ? Theme.accent
@@ -69,7 +70,7 @@ CheckBox {
             anchors.fill: parent
             visible: control.checked
 
-            property color mark: control.enabled ? Theme.bg : Theme.textFaint
+            property color mark: control.enabled ? Theme.bg : Theme.textDisabled
             onMarkChanged: requestPaint()
 
             onPaint: {
@@ -91,9 +92,11 @@ CheckBox {
     contentItem: Text {
         leftPadding: control.indicator ? control.indicator.width + control.spacing : 0
         text: control.text
-        color: control.enabled ? Theme.textColor : Theme.textFaint
+        color: control.enabled ? Theme.textColor : Theme.textDisabled
         font: control.font
-        wrapMode: Text.Wrap
+        wrapMode: Text.WordWrap
+        maximumLineCount: 2
+        elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
     }
 }

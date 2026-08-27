@@ -53,13 +53,18 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
 
 ## Design debt (found by `tools/shoot/review.sh`, 2026-08-27)
 - [x] Offscreen review harness: shoot mode + fixtures + scene dump + design linter
-- [ ] Settings on the type ramp: body is 16px (`Theme.fsBody` is 15), toolbar version label is 10pt `Sans Serif`
-- [ ] Raise secondary text contrast: host-card address lines sit at ~2.2:1 on `Theme.panel`
-- [ ] "Enable mouse control with gamepads…" is cut — needs 559px in 548px and does not elide
-- [ ] Settings scroll area: pad or fade at the header and footer instead of slicing rows in half
-- [ ] Host screen fills only the top ~300px; the rest of the Deck screen is empty
+- [x] Settings on the type ramp; toolbar/footer version labels off points and stock faces; `Theme.fsBody` raised to 16 (PRODUCT.md's floor)
+- [x] Secondary text contrast: `Theme.textFaint` lifted to ~4.9:1 on panel; old value survives as `Theme.textDisabled` for disabled states only
+- [x] Long checkbox labels wrap to two lines (row grows) instead of clipping
+- [x] Settings scroll area: content padding + 32px edge fades at header and footer; focus auto-scroll clears the fade
+- [x] Host screen: cards 400×520 poster-style so a row of three fills the frame (~114px spare, was ~500)
 - [x] Drawer: bitrate slider paints outside the panel's left padding (was the row-selection rail bleeding into the gutter; knob travel now inset too)
-- [ ] Off-token colours where stock Qt shows through (MaterialRipple, ScrollBar, `#ffffff` surfaces)
+- [x] Off-token colours where stock Qt showed through: MvScrollBar (hand-styled, indicator not control), toolbar ripple replaced by focus/press states, `#ffffff` window content rect
+- [ ] Library grid runs under the footer with no padding or fade (same fix as Settings' `edgeFade`, on AppView)
+- [ ] Library typography off-ramp: HeroCard 12px/20px, monogram initials 44px
+- [ ] Translucent scrims want tokens: `#b8080a10` status chip, `#59080a10` HeroCard knock-back, `#3a4060` monogram initials
+- [ ] Material `DialogButtonBox` buttons still stock (Sans Serif, `#a3b6ff`, 11px radius) — restyle dialog buttons on the design system
+- [ ] Focus-glow radii (`cardRadius + 5` etc.), NavigableDialog 16, NavigableMenu 14 — decide a glow radius token or accept as notes
 
 ## P5 — Polish & publish
 - [ ] One-paste installer (Flatpak + Steam shortcut + Decky plugin)

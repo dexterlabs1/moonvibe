@@ -79,6 +79,18 @@
       "settleMs": 700
     },
 
+    "settings-focused": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "key": "Tab", "waitMs": 150 },
+        { "key": "Tab", "waitMs": 150 },
+        { "key": "Tab", "waitMs": 300 }
+      ],
+      "settleMs": 700
+    },
+
     "settings-scrolled": {
       "view": "qrc:/gui/PcView.qml",
       "fixtures": "default",

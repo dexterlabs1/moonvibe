@@ -19,7 +19,7 @@ Row {
             text: glyph
             color: Theme.textColor
             font.family: Theme.fontBody
-            font.pixelSize: 12
+            font.pixelSize: Theme.fsLabel
             font.weight: Font.ExtraBold
         }
     }
@@ -29,7 +29,7 @@ Row {
         text: label
         color: Theme.textMuted
         font.family: Theme.fontBody
-        font.pixelSize: 13
+        font.pixelSize: Theme.fsLabel
         font.weight: Font.DemiBold
     }
 }

@@ -48,7 +48,7 @@ Column {
             width: section.width
             height: body.height + Theme.sp5 * 2
 
-            radius: Theme.cardRadius + 2
+            radius: Theme.cardRadius
             color: Theme.panel
             border.color: Theme.line
             border.width: 1

@@ -15,9 +15,13 @@ CenteredGridView {
     id: pcGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 6
-    bottomMargin: 5
-    cellWidth: 400; cellHeight: 210;
+    topMargin: Theme.sp4
+    bottomMargin: Theme.sp5
+
+    // Host cards are the whole screen on a Deck, so they take the whole screen:
+    // three across the 1280 frame, tall enough that a row of them fills the
+    // space between the toolbar and the footer instead of hugging the top.
+    cellWidth: 420; cellHeight: 540;
     objectName: qsTr("Hosts")
 
     property var navHints: [
@@ -107,9 +111,10 @@ CenteredGridView {
             anchors.horizontalCenter: parent.horizontalCenter
             text: StreamingPreferences.enableMdns ? qsTr("Looking for hosts on your network…")
                                                   : qsTr("Automatic discovery is disabled. Add your host manually.")
-            color: Theme.textMuted
-            font.pointSize: 14
-            font.bold: true
+            color: Theme.textColor
+            font.family: Theme.fontBody
+            font.pixelSize: Theme.fsTitle
+            font.weight: Font.Bold
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
         }
@@ -118,7 +123,9 @@ CenteredGridView {
             anchors.horizontalCenter: parent.horizontalCenter
             text: qsTr("Make sure Sunshine, Apollo, or Vibepollo is running on your PC")
             color: Theme.textFaint
-            font.pointSize: 11
+            font.family: Theme.fontBody
+            font.pixelSize: Theme.fsBody
+            font.weight: Font.DemiBold
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
         }
@@ -138,7 +145,7 @@ CenteredGridView {
                 text: qsTr("YOUR PCS")
                 color: Theme.textMuted
                 font.family: Theme.fontBody
-                font.pixelSize: 12
+                font.pixelSize: Theme.fsMicro
                 font.weight: Font.ExtraBold
                 font.letterSpacing: 1.9
             }
@@ -147,7 +154,7 @@ CenteredGridView {
                 text: pcGrid.count
                 color: Theme.textFaint
                 font.family: Theme.fontBody
-                font.pixelSize: 12
+                font.pixelSize: Theme.fsMicro
                 font.weight: Font.Bold
             }
         }
@@ -158,7 +165,7 @@ CenteredGridView {
     delegate: NavigableItemDelegate {
         id: pcCard
 
-        width: 380; height: 190;
+        width: 400; height: 520;
         padding: 0
         grid: pcGrid
 
@@ -195,6 +202,7 @@ CenteredGridView {
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: 1
+                color: Theme.panel
                 gradient: Gradient {
                     GradientStop {
                         position: 0.0
@@ -211,10 +219,10 @@ CenteredGridView {
             Rectangle {
                 anchors.top: parent.top
                 anchors.right: parent.right
-                anchors.margins: 14
-                height: 24
-                width: statusRow.width + 20
-                radius: 12
+                anchors.margins: Theme.sp5
+                height: 28
+                width: statusRow.width + Theme.sp5
+                radius: 14
                 color: "#B8080a10"
                 border.width: 1
                 border.color: pcCard.isBusy ? Theme.lineHi
@@ -228,7 +236,7 @@ CenteredGridView {
                     spacing: 6
 
                     Rectangle {
-                        width: 7; height: 7; radius: 3.5
+                        width: 8; height: 8; radius: 4
                         anchors.verticalCenter: parent.verticalCenter
                         color: pcCard.isBusy ? Theme.textFaint
                              : !model.online ? Theme.textFaint
@@ -246,7 +254,7 @@ CenteredGridView {
                              : pcCard.needsPairing ? Theme.warn
                              : Theme.ok
                         font.family: Theme.fontBody
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fsMicro
                         font.weight: Font.ExtraBold
                         font.letterSpacing: 0.8
                     }
@@ -257,15 +265,15 @@ CenteredGridView {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.margins: 18
-                spacing: 7
+                anchors.margins: Theme.sp5
+                spacing: Theme.sp3
 
                 Text {
                     width: parent.width
                     text: model.name.toUpperCase()
                     color: Theme.textColor
                     font.family: Theme.fontDisplay
-                    font.pixelSize: 26
+                    font.pixelSize: Theme.fsDisplay
                     font.weight: Font.Bold
                     font.letterSpacing: 1
                     elide: Text.ElideRight
@@ -286,7 +294,7 @@ CenteredGridView {
                          : pcCard.needsPairing ? Theme.warn
                          : Theme.textMuted
                     font.family: Theme.fontBody
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.fsBody
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
@@ -298,7 +306,7 @@ CenteredGridView {
                           : model.serverLabel
                     color: Theme.textFaint
                     font.family: Theme.fontBody
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fsLabel
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
@@ -307,9 +315,9 @@ CenteredGridView {
             BusyIndicator {
                 anchors.top: parent.top
                 anchors.left: parent.left
-                anchors.margins: 14
-                width: 22
-                height: 22
+                anchors.margins: Theme.sp5
+                width: 28
+                height: 28
                 visible: pcCard.isBusy
                 running: visible
             }
@@ -557,5 +565,5 @@ CenteredGridView {
         standardButtons: Dialog.Ok
     }
 
-    ScrollBar.vertical: ScrollBar {}
+    ScrollBar.vertical: MvScrollBar {}
 }

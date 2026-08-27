@@ -25,7 +25,7 @@ TextField {
     bottomPadding: 0
 
     font.family: Theme.fontBody
-    font.pixelSize: 16
+    font.pixelSize: Theme.fsBody
     font.weight: Font.DemiBold
 
     color: Theme.textColor
@@ -39,7 +39,7 @@ TextField {
     placeholderTextColor: "transparent"
 
     background: Rectangle {
-        radius: 10
+        radius: Theme.capsuleRadius
         color: control.enabled ? Theme.panel : Theme.bgRaised
         border.width: control.activeFocus ? 2 : 1
         border.color: !control.enabled ? Theme.line

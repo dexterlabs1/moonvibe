@@ -23,12 +23,60 @@ Flickable {
     contentWidth: settingsColumn1.width > settingsColumn2.width ? settingsColumn1.width : settingsColumn2.width
     contentHeight: settingsColumn1.height > settingsColumn2.height ? settingsColumn1.height : settingsColumn2.height
 
-    ScrollBar.vertical: ScrollBar {
+    // The page scrolls between the toolbar and the footer, and a row caught at
+    // either edge used to be sliced clean in half by the bar. It now fades out
+    // into the bar instead, over this many pixels.
+    property int edgeFade: Theme.sp6
+
+    clip: true
+
+    ScrollBar.vertical: MvScrollBar {
         anchors {
             left: parent.right
-            leftMargin: -10
+            leftMargin: -width - Theme.sp1
         }
     }
+
+    // Declared on `data` rather than as ordinary children: a Flickable's
+    // default property puts children inside contentItem, where they would
+    // scroll away with the page. These have to stay pinned to the viewport.
+    data: [
+        Rectangle {
+            z: 1
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: settingsPage.edgeFade
+            color: Theme.bg
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.bg }
+                GradientStop {
+                    position: 1.0
+                    color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0)
+                }
+            }
+            opacity: settingsPage.contentY > 1 ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: Theme.durFast } }
+        },
+
+        Rectangle {
+            z: 1
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: settingsPage.edgeFade
+            color: Theme.bg
+            gradient: Gradient {
+                GradientStop {
+                    position: 0.0
+                    color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0)
+                }
+                GradientStop { position: 1.0; color: Theme.bg }
+            }
+            opacity: settingsPage.contentY < settingsPage.contentHeight - settingsPage.height - 1 ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: Theme.durFast } }
+        }
+    ]
 
     function isChildOfFlickable(item) {
         while (item) {
@@ -57,8 +105,10 @@ Flickable {
             // Map the focus item's position into our content item's coordinate space
             var pos = item.mapToItem(contentItem, 0, 0)
 
-            // Ensure some extra space is visible around the element we're scrolling to
-            var scrollMargin = height > 100 ? 50 : 0
+            // Ensure some extra space is visible around the element we're
+            // scrolling to. It has to clear the edge fade, or focus lands on a
+            // row that is technically in view and visually half dissolved.
+            var scrollMargin = height > 100 ? edgeFade + Theme.sp5 : 0
 
             if (pos.y - scrollMargin < contentY) {
                 autoScrollAnimation.from = contentY
@@ -105,6 +155,10 @@ Flickable {
         id: settingsColumn1
         padding: Theme.sp5
         rightPadding: Theme.sp3
+        // Room at both ends so the first and last card clear the toolbar and
+        // the footer instead of stopping flush against them.
+        topPadding: Theme.sp5 + settingsPage.edgeFade
+        bottomPadding: Theme.sp5 + settingsPage.edgeFade
         width: settingsPage.width / 2
         spacing: Theme.sp6
 
@@ -119,7 +173,7 @@ Flickable {
                 text: qsTr("Resolution and FPS")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 wrapMode: Text.Wrap
             }
@@ -130,7 +184,7 @@ Flickable {
                 text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
                 color: Theme.textMuted
                 font.family: Theme.fontBody
-                font.pixelSize: 13
+                font.pixelSize: Theme.fsLabel
                 lineHeight: 1.3
                 bottomPadding: Theme.sp2
                 wrapMode: Text.Wrap
@@ -388,7 +442,7 @@ Flickable {
                                       qsTr("Resolutions that are not supported by your client or host PC may cause streaming errors.")
                                 color: Theme.textMuted
                                 font.family: Theme.fontBody
-                                font.pixelSize: 14
+                                font.pixelSize: Theme.fsLabel
                                 lineHeight: 1.35
                                 wrapMode: Label.WordWrap
                                 Layout.maximumWidth: 360
@@ -398,7 +452,7 @@ Flickable {
                                 text: qsTr("Enter a custom resolution:")
                                 color: Theme.textColor
                                 font.family: Theme.fontBody
-                                font.pixelSize: 15
+                                font.pixelSize: Theme.fsBody
                                 font.weight: Font.ExtraBold
                                 Layout.topMargin: Theme.sp2
                             }
@@ -434,7 +488,7 @@ Flickable {
                                     text: "x"
                                     color: Theme.textMuted
                                     font.family: Theme.fontBody
-                                    font.pixelSize: 15
+                                    font.pixelSize: Theme.fsBody
                                     font.weight: Font.ExtraBold
                                 }
 
@@ -555,7 +609,7 @@ Flickable {
                                 text: qsTr("Enter a custom frame rate:")
                                 color: Theme.textColor
                                 font.family: Theme.fontBody
-                                font.pixelSize: 15
+                                font.pixelSize: Theme.fsBody
                                 font.weight: Font.ExtraBold
                             }
 
@@ -703,7 +757,7 @@ Flickable {
                 text: qsTr("Video bitrate:")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 topPadding: Theme.sp4
                 wrapMode: Text.Wrap
@@ -715,7 +769,7 @@ Flickable {
                 text: qsTr("Lower the bitrate on slower connections. Raise the bitrate to increase image quality.")
                 color: Theme.textMuted
                 font.family: Theme.fontBody
-                font.pixelSize: 13
+                font.pixelSize: Theme.fsLabel
                 lineHeight: 1.3
                 wrapMode: Text.Wrap
             }
@@ -768,7 +822,7 @@ Flickable {
                     rightPadding: Theme.sp4
 
                     background: Rectangle {
-                        radius: 11
+                        radius: Theme.capsuleRadius
                         color: resetBitrateButton.activeFocus || resetBitrateButton.hovered ? Theme.panelHi : "transparent"
                         border.width: 1
                         border.color: resetBitrateButton.activeFocus ? Theme.accent : Theme.lineHi
@@ -797,7 +851,7 @@ Flickable {
                 text: qsTr("Display mode")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 topPadding: Theme.sp4
                 bottomPadding: Theme.sp1
@@ -952,7 +1006,7 @@ Flickable {
                 text: qsTr("Audio configuration")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 bottomPadding: Theme.sp1
                 wrapMode: Text.Wrap
@@ -1065,7 +1119,7 @@ Flickable {
                 text: qsTr("SteamGridDB API key (optional)")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 topPadding: Theme.sp4
                 wrapMode: Text.Wrap
@@ -1076,7 +1130,7 @@ Flickable {
                 text: qsTr("Fetches proper 600x900 capsule artwork for your library. Leave empty to use the artwork your host provides.")
                 color: Theme.textMuted
                 font.family: Theme.fontBody
-                font.pixelSize: 13
+                font.pixelSize: Theme.fsLabel
                 lineHeight: 1.3
                 bottomPadding: Theme.sp2
                 wrapMode: Text.Wrap
@@ -1116,7 +1170,7 @@ Flickable {
                 text: qsTr("Language")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 bottomPadding: Theme.sp1
                 wrapMode: Text.Wrap
@@ -1298,7 +1352,7 @@ Flickable {
                 text: qsTr("GUI display mode")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 topPadding: Theme.sp4
                 bottomPadding: Theme.sp1
@@ -1411,6 +1465,8 @@ Flickable {
         padding: Theme.sp5
         leftPadding: Theme.sp3
         rightPadding: Theme.sp6
+        topPadding: Theme.sp5 + settingsPage.edgeFade
+        bottomPadding: Theme.sp5 + settingsPage.edgeFade
         anchors.left: settingsColumn1.right
         width: settingsPage.width / 2
         spacing: Theme.sp6
@@ -1632,7 +1688,7 @@ Flickable {
                 text: qsTr("Video decoder")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 bottomPadding: Theme.sp1
                 wrapMode: Text.Wrap
@@ -1684,7 +1740,7 @@ Flickable {
                 text: qsTr("Video codec")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 topPadding: Theme.sp4
                 bottomPadding: Theme.sp1
@@ -1746,7 +1802,7 @@ Flickable {
                 text: qsTr("Renderer")
                 color: Theme.textColor
                 font.family: Theme.fontBody
-                font.pixelSize: 16
+                font.pixelSize: Theme.fsBody
                 font.weight: Font.DemiBold
                 topPadding: Theme.sp4
                 bottomPadding: Theme.sp1

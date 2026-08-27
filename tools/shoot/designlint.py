@@ -170,6 +170,7 @@ def check_shot(dump, theme, findings):
     radii = {
         theme["ints"].get("cardRadius", 12),
         theme["ints"].get("capsuleRadius", 10),
+        theme["ints"].get("controlRadius", 8),
     }
 
     nodes = []
@@ -270,7 +271,14 @@ def check_shot(dump, theme, findings):
 
             # Text that does not fit and is not allowed to elide is text nobody
             # can read the end of. elide 0 is Text.ElideNone.
-            if node.get("elide", 0) == 0:
+            #
+            # Only judge the item that paints the glyphs. A control (CheckBox,
+            # Button) carries the same text, but its implicitWidth is the
+            # single-line width and it has no elide property, so a label that
+            # wraps correctly inside it would be reported as clipped. Its Text
+            # child is the one that knows whether it elided.
+            paints_text = not any("text" in c for c in node.get("children", []))
+            if paints_text and node.get("elide", 0) == 0:
                 if node.get("implicitW", 0) > node.get("w", 0) + 0.5:
                     report(
                         "error",
@@ -308,10 +316,14 @@ def check_shot(dump, theme, findings):
                         f" {control_height}px floor",
                     )
 
-        # Radii that are neither a token nor a true pill.
+        # Radii that are neither a token nor a true pill. A pill is round on its
+        # short axis, so measure against the smaller dimension -- otherwise a
+        # tall narrow shape (a scrollbar handle, a focus bar) reads as off-scale
+        # for being exactly as round as it can be.
         radius = node.get("radius")
         if radius:
-            pill = abs(radius - node.get("h", 0) / 2) < 1.5
+            short = min(node.get("w", 0), node.get("h", 0))
+            pill = abs(radius - short / 2) < 1.5
             if not pill and round(radius) not in radii:
                 report(
                     "info",

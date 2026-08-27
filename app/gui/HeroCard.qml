@@ -66,6 +66,7 @@ Item {
             anchors.fill: parent
             anchors.margins: 1
             visible: art.isPlaceholder || art.status !== Image.Ready
+            color: Theme.panel
             gradient: Gradient {
                 GradientStop { position: 0.0; color: Theme.monogramTop(card.appName) }
                 GradientStop { position: 1.0; color: Theme.monogramBottom(card.appName) }
@@ -87,6 +88,7 @@ Item {
             anchors.bottom: parent.bottom
             anchors.margins: 1
             height: 110
+            color: Theme.bg
             gradient: Gradient {
                 GradientStop { position: 0.0; color: "#00080a10" }
                 GradientStop { position: 0.45; color: "#B3080a10" }

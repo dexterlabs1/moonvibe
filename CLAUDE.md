@@ -12,6 +12,18 @@ what to do next, and the traps that cost real time.
 UI mockups (all six target screens, 1280×800):
 https://claude.ai/code/artifact/16b29028-036a-4777-8b59-455f1c2fe70a
 
+## Design rule: controller-first, handheld-only
+
+Moonvibe runs on a Steam Deck in handheld mode and is driven by the controller.
+Keyboard and mouse are optional and never assumed. Every UI decision follows:
+the focused item is unmistakable at arm's length; scrolling keeps the focused
+row fully in view; scrollbars are position indicators, not controls; nothing
+depends on hover or a pointer (pressed/focused states carry the feedback, not
+ripples); body text never drops below `Theme.fsBody` on the 7" 1280×800 screen;
+hit targets stay at least `Theme.controlHeight` as a touch fallback; the footer
+NavHints are the primary affordance. When a lint number and this rule disagree,
+this rule wins.
+
 ## Build & verify (do this before every push)
 
 ```bash

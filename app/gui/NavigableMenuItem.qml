@@ -13,11 +13,16 @@ MenuItem {
     rightPadding: Theme.sp4
     spacing: Theme.sp3
 
+    // The contentItem sets this too, but the control's own font is what a
+    // scene dump reports -- and left alone it is the stock Qt face.
+    font.family: Theme.fontBody
+    font.pixelSize: Theme.fsBody
+
     // Focus and hover are the same visual state deliberately: on a handheld the
     // controller drives focus and there is no cursor, so a separate hover
     // treatment would only ever be seen with a mouse plugged in.
     background: Rectangle {
-        radius: 10
+        radius: Theme.capsuleRadius
         color: control.activeFocus || control.hovered ? Theme.panelHi : "transparent"
 
         Rectangle {
@@ -37,7 +42,7 @@ MenuItem {
     contentItem: Text {
         leftPadding: control.checkable ? Theme.sp5 + Theme.sp2 : 0
         text: control.text
-        color: !control.enabled ? Theme.textFaint
+        color: !control.enabled ? Theme.textDisabled
              : control.activeFocus ? Theme.textColor
              : Theme.textMuted
         font.family: Theme.fontBody

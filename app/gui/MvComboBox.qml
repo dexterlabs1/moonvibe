@@ -22,11 +22,11 @@ ComboBox {
     rightPadding: Theme.sp4 + (indicator ? indicator.width : 0)
 
     font.family: Theme.fontBody
-    font.pixelSize: 15
+    font.pixelSize: Theme.fsBody
     font.weight: Font.DemiBold
 
     background: Rectangle {
-        radius: 10
+        radius: Theme.capsuleRadius
         color: control.enabled ? Theme.panel : Theme.bgRaised
         border.width: control.activeFocus ? 2 : 1
         border.color: !control.enabled ? Theme.line
@@ -37,7 +37,7 @@ ComboBox {
 
     contentItem: Text {
         text: control.displayText
-        color: control.enabled ? Theme.textColor : Theme.textFaint
+        color: control.enabled ? Theme.textColor : Theme.textDisabled
         font: control.font
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
@@ -54,7 +54,7 @@ ComboBox {
         Canvas {
             anchors.fill: parent
 
-            property color stroke: !control.enabled ? Theme.textFaint
+            property color stroke: !control.enabled ? Theme.textDisabled
                                  : control.activeFocus ? Theme.accent
                                  : Theme.textMuted
             onStrokeChanged: requestPaint()
@@ -88,7 +88,7 @@ ComboBox {
         highlighted: control.highlightedIndex === index
 
         background: Rectangle {
-            radius: 10
+            radius: Theme.capsuleRadius
             color: comboItem.highlighted || comboItem.hovered ? Theme.panelHi : "transparent"
 
             Rectangle {

@@ -28,6 +28,10 @@ ApplicationWindow {
     Rectangle {
         anchors.fill: parent
         z: -1
+        // The gradient paints over this, but an unset Rectangle colour is
+        // white, and white is what the scene reports for a surface that was
+        // never given a token.
+        color: Theme.bg
         gradient: Gradient {
             GradientStop { position: 0.0; color: Theme.topGlow }
             GradientStop { position: 0.55; color: Theme.bg }
@@ -300,7 +304,7 @@ ApplicationWindow {
                 text: "MOONVIBE"
                 color: Theme.textColor
                 font.family: Theme.fontDisplay
-                font.pixelSize: 17
+                font.pixelSize: Theme.fsTitle
                 font.weight: Font.Bold
                 font.letterSpacing: 2.4
                 Layout.alignment: Qt.AlignVCenter
@@ -335,7 +339,7 @@ ApplicationWindow {
                         text: stackView.currentItem ? stackView.currentItem.objectName : ""
                         color: Theme.textColor
                         font.family: Theme.fontBody
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.fsLabel
                         font.weight: Font.ExtraBold
                     }
                 }
@@ -374,7 +378,10 @@ ApplicationWindow {
                 id: versionLabel
                 visible: stackView.currentItem instanceof SettingsView
                 text: qsTr("Version %1").arg(SystemProperties.versionString)
-                font.pointSize: 12
+                color: Theme.textMuted
+                font.family: Theme.fontBody
+                font.pixelSize: Theme.fsLabel
+                font.weight: Font.DemiBold
                 horizontalAlignment: Qt.AlignRight
                 verticalAlignment: Qt.AlignVCenter
             }
@@ -542,7 +549,7 @@ ApplicationWindow {
                 Layout.leftMargin: 4
                 color: Theme.textMuted
                 font.family: Theme.fontBody
-                font.pixelSize: 14
+                font.pixelSize: Theme.fsLabel
                 font.weight: Font.Bold
 
                 Component.onCompleted: refresh()
@@ -592,8 +599,10 @@ ApplicationWindow {
             anchors.rightMargin: 24
             text: qsTr("Moonvibe %1").arg(SystemProperties.versionString)
             color: Theme.textFaint
-            font.pointSize: 10
-            font.bold: true
+            font.family: Theme.fontBody
+            font.pixelSize: Theme.fsMicro
+            font.weight: Font.ExtraBold
+            font.letterSpacing: 0.6
         }
     }
 
