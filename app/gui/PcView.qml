@@ -24,12 +24,30 @@ CenteredGridView {
     cellWidth: 420; cellHeight: 540;
     objectName: qsTr("Hosts")
 
-    property var navHints: [
-        { b: "A", t: qsTr("Connect") },
-        { b: "X", t: qsTr("Options") },
-        { b: "Y", t: qsTr("Settings") },
-        { b: "B", t: qsTr("Quit") }
-    ]
+    // The footer is the primary affordance, so it describes the card that is
+    // actually highlighted. A on an offline host opens its menu rather than
+    // connecting, and X wakes a sleeping one rather than opening anything.
+    property var navHints: {
+        var hints = []
+
+        // Nothing to act on until a host has been found, and X falls through
+        // to main.qml's Settings shortcut rather than opening any options.
+        if (pcGrid.count > 0) {
+            var card = pcGrid.currentItem
+
+            hints.push({ b: "A", t: !card ? qsTr("Connect")
+                                  : !card.isOnline ? qsTr("Options")
+                                  : card.needsPairing ? qsTr("Pair")
+                                  : qsTr("Connect") })
+
+            hints.push({ b: "X", t: card && card.canWake ? qsTr("Wake")
+                                                         : qsTr("Options") })
+        }
+
+        hints.push({ b: "Y", t: qsTr("Settings") })
+        hints.push({ b: "B", t: qsTr("Quit") })
+        return hints
+    }
 
     Component.onCompleted: {
         // Don't show any highlighted item until interacting with them.
@@ -74,7 +92,7 @@ CenteredGridView {
             errorDialog.text = qsTr("Unable to connect to the specified PC.")
 
             if (detectedPortBlocking) {
-                errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking Moonlight. Streaming over the Internet may not work while connected to this network.")
+                errorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking Moonvibe. Streaming over the Internet may not work while connected to this network.")
             }
             else {
                 errorDialog.helpText = qsTr("Click the Help button for possible solutions.")
@@ -172,6 +190,7 @@ CenteredGridView {
         property alias pcContextMenu : pcContextMenuLoader.item
 
         readonly property bool isBusy: model.statusUnknown
+        readonly property bool isOnline: model.online
         readonly property bool needsPairing: model.online && !model.paired
         readonly property bool canWake: !model.online && !model.statusUnknown && model.wakeable
 
@@ -285,7 +304,7 @@ CenteredGridView {
                     width: parent.width
                     text: model.runningApp ? qsTr("%1 is running").arg(model.runningApp)
                         : pcCard.needsPairing ? qsTr("Select to pair with this PC")
-                        : pcCard.canWake ? qsTr("Asleep - press X to wake")
+                        : pcCard.canWake ? qsTr("Press X to wake it")
                         : !model.online ? qsTr("Not reachable on this network")
                         : pcCard.isBusy ? qsTr("Checking if it is awake")
                         : model.appCount > 0 ? qsTr("%1 games").arg(model.appCount)
@@ -392,7 +411,7 @@ CenteredGridView {
         onClicked: {
             if (model.online) {
                 if (!model.serverSupported) {
-                    errorDialog.text = qsTr("The version of GeForce Experience on %1 is not supported by this build of Moonlight. You must update Moonlight to stream from %1.").arg(model.name)
+                    errorDialog.text = qsTr("The version of GeForce Experience on %1 is not supported by this build of Moonvibe. You must update Moonvibe to stream from %1.").arg(model.name)
                     errorDialog.helpText = ""
                     errorDialog.open()
                 }
@@ -440,9 +459,16 @@ CenteredGridView {
         }
 
         Keys.onMenuPressed: {
-            // We must use open() here so the menu is positioned on
-            // the ItemDelegate and not where the mouse cursor is
-            pcContextMenu.open()
+            if (pcCard.canWake) {
+                // The card promises "X to wake", so X wakes it. Everything
+                // else the menu offers is still one A press away.
+                computerModel.wakeComputer(index)
+            }
+            else {
+                // We must use open() here so the menu is positioned on
+                // the ItemDelegate and not where the mouse cursor is
+                pcContextMenu.open()
+            }
         }
 
         Keys.onDeletePressed: {
@@ -486,7 +512,7 @@ CenteredGridView {
         standardButtons: Dialog.Ok
 
         onAboutToShow: {
-            testConnectionDialog.text = qsTr("Moonlight is testing your network connection to determine if any required ports are blocked.") + "\n\n" + qsTr("This may take a few seconds…")
+            testConnectionDialog.text = qsTr("Moonvibe is testing your network connection to determine if any required ports are blocked.") + "\n\n" + qsTr("This may take a few seconds…")
             showSpinner = true
         }
 
@@ -497,11 +523,11 @@ CenteredGridView {
                 imageSrc = "qrc:/res/baseline-warning-24px.svg"
             }
             else if (result === 0) {
-                text = qsTr("This network does not appear to be blocking Moonlight. If you still have trouble connecting, check your PC's firewall settings.") + "\n\n" + qsTr("If you are trying to stream over the Internet, install the Moonlight Internet Hosting Tool on your gaming PC and run the included Internet Streaming Tester to check your gaming PC's Internet connection.")
+                text = qsTr("This network does not appear to be blocking Moonvibe. If you still have trouble connecting, check your PC's firewall settings.") + "\n\n" + qsTr("If you are trying to stream over the Internet, install the Moonlight Internet Hosting Tool on your gaming PC and run the included Internet Streaming Tester to check your gaming PC's Internet connection.")
                 imageSrc = "qrc:/res/baseline-check_circle_outline-24px.svg"
             }
             else {
-                text = qsTr("Your PC's current network connection seems to be blocking Moonlight. Streaming over the Internet may not work while connected to this network.") + "\n\n" + qsTr("The following network ports were blocked:") + "\n"
+                text = qsTr("Your PC's current network connection seems to be blocking Moonvibe. Streaming over the Internet may not work while connected to this network.") + "\n\n" + qsTr("The following network ports were blocked:") + "\n"
                 text += blockedPorts
                 imageSrc = "qrc:/res/baseline-error_outline-24px.svg"
             }

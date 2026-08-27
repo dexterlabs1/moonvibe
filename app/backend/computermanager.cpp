@@ -2,6 +2,7 @@
 #include "boxartmanager.h"
 #include "nvhttp.h"
 #include "nvpairingmanager.h"
+#include "recentapps.h"
 
 #include <Limelight.h>
 #include <QtEndian>
@@ -550,6 +551,10 @@ public:
 
         // Delete cached box art
         BoxArtManager::deleteBoxArt(m_Computer);
+
+        // Forget what was played here. Otherwise the history outlives the host
+        // and is silently reattached to whatever is added under the same UUID.
+        RecentApps::get().forgetComputer(m_Computer->uuid);
 
         // Finally, delete the computer itself. This must be done
         // last because the polling thread might be using it.

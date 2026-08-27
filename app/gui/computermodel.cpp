@@ -82,8 +82,18 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
                tr("Running Game ID: %1").arg(computer->state == NvComputer::CS_ONLINE ? QString::number(computer->currentGameId) : tr("Unknown")) + '\n' +
                tr("HTTPS Port: %1").arg(computer->state == NvComputer::CS_ONLINE ? QString::number(computer->activeHttpsPort) : tr("Unknown"));
     }
-    case AppCountRole:
-        return computer->appList.count();
+    case AppCountRole: {
+        // Count what the library will actually show. Hidden apps are filtered
+        // out there (AppModel::getVisibleApps), so counting the whole list here
+        // had the card promising games the grid then never listed.
+        int visibleCount = 0;
+        for (const NvApp& app : computer->appList) {
+            if (!app.hidden) {
+                visibleCount++;
+            }
+        }
+        return visibleCount;
+    }
     case RunningAppRole: {
         // Name of whatever is running on the host right now, so the host card
         // can say what it is busy with instead of only that it is busy.

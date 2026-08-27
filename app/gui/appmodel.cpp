@@ -1,5 +1,7 @@
 #include "appmodel.h"
 
+#include <QSharedPointer>
+
 AppModel::AppModel(QObject *parent)
     : QAbstractListModel(parent)
 {
@@ -44,16 +46,56 @@ Session* AppModel::createSessionForApp(int appIndex)
     Q_ASSERT(appIndex < m_VisibleApps.count());
     NvApp app = m_VisibleApps.at(appIndex);
 
-    // Stamp this app as most recently played on this host so it leads the
-    // "Continue" row next time. Recorded at launch rather than on a clean exit,
-    // so a crashed or force-quit session still counts as played.
-    RecentApps::get().recordLaunch(m_Computer->uuid, app.id);
-    emit dataChanged(createIndex(appIndex, 0),
-                     createIndex(appIndex, 0),
-                     QVector<int>() << LastPlayedRole);
-    emit recentAppsChanged();
+    Session* session = new Session(m_Computer, app);
 
-    return new Session(m_Computer, app);
+    // "Last played" is stamped when the session ends, not when one is asked
+    // for. A launch the host refuses, or one that never reaches the stream,
+    // is not something you played, and it used to lead the "Continue" row
+    // anyway. `streamed` is what separates the two: it is set only once the
+    // connection is actually up, and it lives as long as the connections that
+    // read it. connectionStarted() is emitted on this thread before the
+    // cleanup task queues sessionFinished(), so the flag is always current
+    // by the time it is read.
+    auto streamed = QSharedPointer<bool>::create(false);
+    const int appId = app.id;
+
+    connect(session, &Session::connectionStarted, this, [streamed]() {
+        *streamed = true;
+    });
+    connect(session, &Session::sessionFinished, this, [this, streamed, appId](int) {
+        if (*streamed) {
+            stampPlayed(appId);
+        }
+    });
+
+    return session;
+}
+
+void AppModel::markPlayed(int appIndex)
+{
+    if (appIndex < 0 || appIndex >= m_VisibleApps.count()) {
+        return;
+    }
+
+    stampPlayed(m_VisibleApps.at(appIndex).id);
+}
+
+void AppModel::stampPlayed(int appId)
+{
+    RecentApps::get().recordLaunch(m_Computer->uuid, appId);
+
+    // The list may have been reordered or refreshed while the session ran, so
+    // find the row by app ID rather than trusting the index we launched from.
+    for (int i = 0; i < m_VisibleApps.count(); i++) {
+        if (m_VisibleApps.at(i).id == appId) {
+            emit dataChanged(createIndex(i, 0),
+                             createIndex(i, 0),
+                             QVector<int>() << LastPlayedRole);
+            break;
+        }
+    }
+
+    emit recentAppsChanged();
 }
 
 QVariantList AppModel::getRecentApps(int maxCount)

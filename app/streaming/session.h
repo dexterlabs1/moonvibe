@@ -298,6 +298,9 @@ private:
 
     Overlay::OverlayManager m_OverlayManager;
     StreamDrawer m_Drawer;
+    // When the stream event loop started, so the drawer can say how long you
+    // have been in this session. 0 until it does.
+    Uint32 m_StreamStartTicks = 0;
 
     static CONNECTION_LISTENER_CALLBACKS k_ConnCallbacks;
     static Session* s_ActiveSession;

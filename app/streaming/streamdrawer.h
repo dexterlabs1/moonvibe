@@ -36,8 +36,15 @@ public:
         bool hdr = false;
         int bitrateKbps = 0;
         int bitrateMaxKbps = 150000;
+        // Whether the host is taking bitrate changes mid-stream. Only then may
+        // the row claim to be live; without the ABR dialect a change costs a
+        // reconnect, and the pill was a promise nothing kept.
+        bool abrLive = false;
         int latencyMs = -1;
-        // Plain-language verdict rather than a wall of numbers.
+        // Plain-language verdict rather than a wall of numbers. It is only a
+        // verdict if something measured it: until healthKnown is set, the card
+        // says so instead of reporting a health nobody computed.
+        bool healthKnown = false;
         enum Health { HealthGood, HealthStrained, HealthBad } health = HealthGood;
         QString healthDetail;
         bool gyroEnabled = false;

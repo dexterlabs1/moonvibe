@@ -6,11 +6,14 @@ the Steam Deck, pairing best with [Vibepollo](https://github.com/Nonary/Vibepoll
 and [Apollo](https://github.com/ClassicOldSong/Apollo) hosts while staying fully
 compatible with stock [Sunshine](https://github.com/LizardByte/Sunshine).
 
-> **Status: pre-alpha (P0).** This repo is a full-history import of upstream
-> moonlight-qt `master` with a rebrand and Deck-focused packaging. The fun parts
-> — controller-first UI, in-stream settings drawer, live ABR bitrate, Decky
-> Quick Access plugin — are being built next; see [BACKLOG.md](BACKLOG.md) and
-> [docs/PRODUCT.md](docs/PRODUCT.md).
+> **Status: early, but shipping.** Six releases are out; the latest, 0.6.0,
+> brings a dark Deck-first UI shell, a library with a Continue row, host cards,
+> pairing PIN tiles, and menus/dialogs rebuilt on the design system. It installs
+> from the signed Flatpak repo at <https://dexterlabs1.github.io/moonvibe/>,
+> with updates delivered through Discover — see the install section below. An
+> in-stream settings drawer and rebindable shortcuts are done on `main` but not
+> yet released; see [BACKLOG.md](BACKLOG.md) and [docs/PRODUCT.md](docs/PRODUCT.md)
+> for what's next.
 
 
 ## Install on a Steam Deck

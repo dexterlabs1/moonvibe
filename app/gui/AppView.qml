@@ -5,6 +5,7 @@ import QtQuick.Layouts 1.3
 
 import AppModel 1.0
 import ComputerManager 1.0
+import ComputerModel 1.0
 import StreamingPreferences 1.0
 import SdlGamepadKeyNavigation 1.0
 
@@ -20,14 +21,35 @@ FocusScope {
     // Entries from AppModel::getRecentApps(), newest first
     property var recentApps: []
 
+    // The header's host pill claims to show whether this machine is reachable.
+    // AppModel knows nothing about it, and ComputerModel's roles are the only
+    // place the state is exposed to QML, so the view republishes its own host's
+    // for main.qml to bind to.
+    property ComputerModel hostModel: createHostModel()
+    property bool hostOnline: false
+    property bool hostStatusUnknown: false
+
     id: root
     focus: true
 
-    property var navHints: [
-        { b: "A", t: qsTr("Play") },
-        { b: "X", t: qsTr("App options") },
-        { b: "B", t: qsTr("Back") }
-    ]
+    // The footer is the primary affordance, so it describes the item that
+    // actually has focus rather than the grid's usual case.
+    property var navHints: {
+        var hints = []
+        var heroFocused = heroSection.visible && heroRow.activeFocus
+        var item = heroFocused ? heroRow.currentItem : appGrid.currentItem
+
+        hints.push({ b: "A", t: item && item.running ? qsTr("Resume") : qsTr("Play") })
+
+        // X on the Continue row only moves focus down into the grid; it opens
+        // nothing, so it doesn't claim to.
+        if (!heroFocused) {
+            hints.push({ b: "X", t: qsTr("App options") })
+        }
+
+        hints.push({ b: "B", t: qsTr("Back") })
+        return hints
+    }
 
     function computerLost()
     {
@@ -39,6 +61,15 @@ FocusScope {
     {
         var model = Qt.createQmlObject('import AppModel 1.0; AppModel {}', parent, '')
         model.initialize(ComputerManager, computerIndex, showHiddenGames)
+        return model
+    }
+
+    function createHostModel()
+    {
+        // initialize() must run before anything reads the model, which rules
+        // out declaring it inline and initializing in Component.onCompleted.
+        var model = Qt.createQmlObject('import ComputerModel 1.0; ComputerModel {}', parent, '')
+        model.initialize(ComputerManager)
         return model
     }
 
@@ -101,6 +132,36 @@ FocusScope {
     StackView.onDeactivating: {
         appModel.computerLost.disconnect(computerLost)
         activated = false
+    }
+
+    // A model role can only be read from inside a delegate, so this is the
+    // delegate: nothing to look at, just the two bindings the header pill needs.
+    Repeater {
+        model: root.hostModel
+
+        delegate: Item {
+            visible: false
+
+            Binding {
+                target: root
+                property: "hostOnline"
+                value: model.online
+                when: index === root.computerIndex
+            }
+
+            Binding {
+                target: root
+                property: "hostStatusUnknown"
+                value: model.statusUnknown
+                when: index === root.computerIndex
+            }
+        }
+    }
+
+    Component.onDestruction: {
+        if (hostModel) {
+            hostModel.destroy()
+        }
     }
 
     // The recents list is derived data, so it has to be rebuilt whenever the
@@ -279,6 +340,9 @@ FocusScope {
                 grid: appGrid
 
                 property alias appContextMenu: appContextMenuLoader.item
+
+                // Named to match HeroCard's, so the footer can ask either one.
+                readonly property bool running: model.running
 
                 // Dim the app if it's hidden
                 opacity: model.hidden ? 0.4 : 1.0

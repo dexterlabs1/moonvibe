@@ -44,10 +44,12 @@ ApplicationWindow {
     Material.foreground: Theme.textColor
 
 
-    // Hints shown in the footer when the current view doesn't provide its own
+    // Hints shown in the footer when the current view doesn't provide its own.
+    // The views that don't are the command-line entry points, which are pushed
+    // as the only item on the stack -- so B has nothing to pop and quits.
     property var defaultNavHints: [
         { b: "A", t: qsTr("Select") },
-        { b: "B", t: qsTr("Back") },
+        { b: "B", t: qsTr("Quit") },
         { b: "Y", t: qsTr("Settings") }
     ]
     property var activeNavHints: stackView.currentItem && stackView.currentItem.navHints !== undefined
@@ -180,9 +182,9 @@ ApplicationWindow {
     }
 
     // This timer keeps us polling for 5 minutes of inactivity
-    // to allow the user to work with Moonlight on a second display
+    // to allow the user to work with Moonvibe on a second display
     // while dealing with configuration issues. This will ensure
-    // machines come online even if the input focus isn't on Moonlight.
+    // machines come online even if the input focus isn't on Moonvibe.
     Timer {
         id: inactivityTimer
         interval: 5 * 60000
@@ -331,7 +333,13 @@ ApplicationWindow {
                     Rectangle {
                         width: 8; height: 8; radius: 4
                         anchors.verticalCenter: parent.verticalCenter
-                        color: Theme.ok
+                        // The host's real state, republished by AppView from
+                        // ComputerModel. Amber while a poll is outstanding:
+                        // the view pops itself once the host is truly gone.
+                        color: !hostPill.visible ? Theme.textFaint
+                             : stackView.currentItem.hostOnline ? Theme.ok
+                             : stackView.currentItem.hostStatusUnknown ? Theme.warn
+                             : Theme.textFaint
                     }
 
                     Label {
@@ -455,7 +463,7 @@ ApplicationWindow {
 
                 function updateAvailable(version, url)
                 {
-                    ToolTip.text = qsTr("Update available for Moonlight: Version %1").arg(version)
+                    ToolTip.text = qsTr("Update available for Moonvibe: Version %1").arg(version)
                     updateButton.browserUrl = url
                     updateButton.visible = true
                 }
@@ -608,7 +616,7 @@ ApplicationWindow {
 
     ErrorMessageDialog {
         id: noHwDecoderDialog
-        text: qsTr("No functioning hardware accelerated video decoder was detected by Moonlight. " +
+        text: qsTr("No functioning hardware accelerated video decoder was detected by Moonvibe. " +
                    "Your streaming performance may be severely degraded in this configuration.")
         helpText: qsTr("Click the Help button for more information on solving this problem.")
         helpUrl: "https://github.com/moonlight-stream/moonlight-docs/wiki/Fixing-Hardware-Decoding-Problems"
@@ -625,7 +633,7 @@ ApplicationWindow {
     NavigableMessageDialog {
         id: wow64Dialog
         standardButtons: Dialog.Ok | Dialog.Cancel
-        text: qsTr("This version of Moonlight isn't optimized for your PC. Please download the '%1' version of Moonlight for the best streaming performance.").arg(SystemProperties.friendlyNativeArchName)
+        text: qsTr("This version of Moonvibe isn't optimized for your PC. Please download the '%1' version of Moonvibe for the best streaming performance.").arg(SystemProperties.friendlyNativeArchName)
         onAccepted: {
             Qt.openUrlExternally("https://github.com/dexterlabs1/moonvibe/releases");
         }
@@ -634,7 +642,7 @@ ApplicationWindow {
     ErrorMessageDialog {
         id: unmappedGamepadDialog
         property string unmappedGamepads : ""
-        text: qsTr("Moonlight detected gamepads without a mapping:") + "\n" + unmappedGamepads
+        text: qsTr("Moonvibe detected gamepads without a mapping:") + "\n" + unmappedGamepads
         helpTextSeparator: "\n\n"
         helpText: qsTr("Click the Help button for information on how to map your gamepads.")
         helpUrl: "https://github.com/moonlight-stream/moonlight-docs/wiki/Gamepad-Mapping"

@@ -39,7 +39,7 @@
 	</branding>
 
 	<releases>
-		<release version="0.6.0" date="2026-08-19">
+		<release version="0.6.0" date="2026-08-20">
 			<description>
 				<ul>
 					<li>Back to opening on your PCs; the home screen is gone</li>
@@ -47,7 +47,7 @@
 				</ul>
 			</description>
 		</release>
-		<release version="0.5.0" date="2026-08-19">
+		<release version="0.5.0" date="2026-08-20">
 			<description>
 				<p>A new home screen. Moonvibe no longer opens on a list of PCs:</p>
 				<ul>
@@ -69,21 +69,14 @@
 		</release>
 		<release version="0.3.0" date="2026-08-19">
 			<description>
-				<p>Library and pairing:</p>
-				<ul>
-					<li>Continue row of recently played apps above the library grid</li>
-					<li>Pairing shows the PIN in large tiles with a link straight to the host web UI</li>
-					<li>Optional SteamGridDB artwork, with the host's own art as fallback</li>
-				</ul>
-			</description>
-		</release>
-		<release version="0.2.0" date="2026-08-19">
-			<description>
-				<p>Deck-first UI shell:</p>
+				<p>Deck-first UI shell, library, and pairing:</p>
 				<ul>
 					<li>Dark OLED-first theme across the whole app</li>
 					<li>Controller glyph hint bar (A/B/X/Y) on every screen</li>
 					<li>Host cards with live status, app grid with monogram art placeholders and running badges</li>
+					<li>Continue row of recently played apps above the library grid</li>
+					<li>Pairing shows the PIN in large tiles with a link straight to the host web UI</li>
+					<li>Optional SteamGridDB artwork, with the host's own art as fallback</li>
 				</ul>
 			</description>
 		</release>

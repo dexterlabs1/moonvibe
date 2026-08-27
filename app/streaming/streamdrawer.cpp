@@ -350,26 +350,35 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
     drawText(s, m_FontLabel, codecLine, kPad + modeW + 12, y + 10, kTextMuted);
     y += 46;
 
-    // One honest verdict, then the evidence.
+    // One honest verdict, then the evidence -- and no verdict at all until
+    // something has actually measured the session. A card that always read
+    // "Holding steady" was not reporting health, it was decoration.
+    const bool healthKnown = m_Status.healthKnown;
     SDL_Color healthColor = m_Status.health == Status::HealthGood ? kOk
                           : m_Status.health == Status::HealthStrained ? kWarn
                           : kDanger;
-    fillRoundedRect(s, kPad, y, w - kPad * 2, 62, 10, withAlpha(healthColor, 0x14));
-    strokeRoundedRect(s, kPad, y, w - kPad * 2, 62, 10, 1, withAlpha(healthColor, 0x55));
+    fillRoundedRect(s, kPad, y, w - kPad * 2, 62, 10,
+                    healthKnown ? withAlpha(healthColor, 0x14) : kPanel);
+    strokeRoundedRect(s, kPad, y, w - kPad * 2, 62, 10, 1,
+                      healthKnown ? withAlpha(healthColor, 0x55) : kLine);
 
-    // Signal bars: filled to match the verdict.
-    int bars = m_Status.health == Status::HealthGood ? 4
+    // Signal bars: filled to match the verdict, and empty while there isn't one.
+    int bars = !healthKnown ? 0
+             : m_Status.health == Status::HealthGood ? 4
              : m_Status.health == Status::HealthStrained ? 2 : 1;
     for (int i = 0; i < 4; i++) {
         int bh = 6 + i * 3;
         fillRect(s, kPad + 14 + i * 7, y + 34 - bh, 4, bh, i < bars ? healthColor : kLineHi);
     }
 
-    const QString verdict = m_Status.health == Status::HealthGood ? QStringLiteral("Holding steady")
+    const QString verdict = !healthKnown ? QStringLiteral("Session stats coming")
+                          : m_Status.health == Status::HealthGood ? QStringLiteral("Holding steady")
                           : m_Status.health == Status::HealthStrained ? QStringLiteral("Struggling")
                           : QStringLiteral("Not keeping up");
-    drawText(s, m_FontBody, verdict, kPad + 52, y + 12, healthColor);
-    drawText(s, m_FontMicro, m_Status.healthDetail, kPad + 52, y + 34, kTextMuted);
+    drawText(s, m_FontBody, verdict, kPad + 52, y + 12,
+             healthKnown ? healthColor : kTextMuted);
+    drawText(s, m_FontMicro, healthKnown ? m_Status.healthDetail : QStringLiteral("—"),
+             kPad + 52, y + 34, healthKnown ? kTextMuted : kTextFaint);
     y += 78;
 
     // ---- Bitrate ----
@@ -377,8 +386,12 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
     // section: at 58 the highlight ran under the DISPLAY label below it.
     drawRowHighlight(s, kPad, y, w - kPad * 2, 40, m_Selected == RowBitrate);
     drawSectionLabel(s, QStringLiteral("Bitrate"), kPad, y);
-    drawPill(s, kPad + 92, y - 3, 20, QStringLiteral("LIVE"), kAccent,
-             withAlpha(kAccent, 0x24), withAlpha(kAccent, 0x66));
+    // Only claim the change lands live when it does. Bitrate is negotiated at
+    // RTSP SETUP; without the host's ABR dialect a change needs a reconnect.
+    if (m_Status.abrLive) {
+        drawPill(s, kPad + 92, y - 3, 20, QStringLiteral("LIVE"), kAccent,
+                 withAlpha(kAccent, 0x24), withAlpha(kAccent, 0x66));
+    }
 
     const QString rate = QStringLiteral("%1 Mbps").arg(m_Status.bitrateKbps / 1000);
     drawText(s, m_FontBody, rate, w - kPad - textWidth(m_FontBody, rate), y - 4, kText);

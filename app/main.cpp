@@ -1029,7 +1029,13 @@ int main(int argc, char *argv[])
         status.codec = QStringLiteral("HEVC");
         status.hdr = true;
         status.bitrateKbps = 45000;
+        status.abrLive = true;
         status.latencyMs = 7;
+        // The preview is the design reference, so it shows the panel in the
+        // state it was designed for: a host taking bitrate changes live and a
+        // health verdict something has actually measured. A real session sets
+        // neither yet and draws the neutral card instead.
+        status.healthKnown = true;
         status.health = StreamDrawer::Status::HealthGood;
         status.healthDetail = QStringLiteral("7 ms to TOWER · no dropped frames in 10 min");
         status.gyroEnabled = true;

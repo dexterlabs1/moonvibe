@@ -143,6 +143,11 @@ void SystemProperties::updateDecoderProperties(bool hasHardwareAcceleration, boo
     SDL_DestroyWindow(testWindow);
     testWindow = nullptr;
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
+
+    // Tearing the video subsystem down posts SDL_QUIT. That quit is ours, not
+    // the user's, so it must not reach anyone who reads it as one -- see
+    // SdlGamepadKeyNavigation::onPollingTimerFired().
+    SDL_FlushEvent(SDL_QUIT);
 }
 
 QRect SystemProperties::getNativeResolution(int displayIndex)
@@ -194,6 +199,7 @@ void SystemProperties::startAsyncLoad()
                      "Failed to create window for hardware decode test: %s",
                      SDL_GetError());
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        SDL_FlushEvent(SDL_QUIT);
         return;
     }
 
@@ -276,4 +282,7 @@ void SystemProperties::refreshDisplays()
     }
 
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
+
+    // Same again: this teardown's SDL_QUIT is not a request to close the app.
+    SDL_FlushEvent(SDL_QUIT);
 }

@@ -107,22 +107,34 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
     SDL_JoystickUpdate();
 
     // Discard any pending button events on the first poll to avoid picking up
-    // stale input data from the stream session (like the quit combo).
+    // stale input data from the stream session (like the quit combo). A queued
+    // SDL_QUIT is stale in the same way -- it belongs to whatever tore the video
+    // subsystem down while we were not polling, not to the user.
     if (m_FirstPoll) {
         SDL_FlushEvent(SDL_CONTROLLERBUTTONDOWN);
         SDL_FlushEvent(SDL_CONTROLLERBUTTONUP);
+        SDL_FlushEvent(SDL_QUIT);
         m_FirstPoll = false;
     }
 
-    // Peep events rather than polling to avoid calling SDL_PumpEvents()
-    while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) == 1) {
+    // SDL posts a quit event because we hold the video subsystem open on
+    // startup, and posts another every time it is torn down -- which
+    // SystemProperties' decoder probe does on its own schedule, seconds after
+    // launch. In GUI mode there is no SDL window: the shell is a Qt
+    // ApplicationWindow, so the real quit paths are its close button and B on
+    // the host list (both go through quitConfirmationDialog), and this poller
+    // is disabled the whole time a stream owns the SDL window. Every SDL_QUIT
+    // we could see here is therefore that spurious teardown event, never the
+    // user. Acting on it made the app exit by itself (upstream) or pop an
+    // unbidden quit prompt (worse). Swallow it.
+    SDL_FlushEvent(SDL_QUIT);
+
+    // Peep events rather than polling to avoid calling SDL_PumpEvents(), and
+    // take only the controller range: anything else in the queue belongs to
+    // another part of the app and has to stay there for it to find.
+    while (SDL_PeepEvents(&event, 1, SDL_GETEVENT,
+                          SDL_CONTROLLERAXISMOTION, SDL_CONTROLLERDEVICEREMAPPED) == 1) {
         switch (event.type) {
-        case SDL_QUIT:
-            // SDL may send us a quit event since we initialize
-            // the video subsystem on startup. If we get one,
-            // forward it on for Qt to take care of.
-            QCoreApplication::instance()->quit();
-            break;
         case SDL_CONTROLLERBUTTONDOWN:
         case SDL_CONTROLLERBUTTONUP:
         {

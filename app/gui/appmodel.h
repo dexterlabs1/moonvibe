@@ -31,6 +31,11 @@ public:
 
     Q_INVOKABLE Session* createSessionForApp(int appIndex);
 
+    // Records that this app was played, now. The session started by
+    // createSessionForApp() does this for itself when it ends; this is the
+    // hook for a launch path that finishes somewhere this model can't see.
+    Q_INVOKABLE void markPlayed(int appIndex);
+
     Q_INVOKABLE int getDirectLaunchAppIndex();
 
     Q_INVOKABLE int getRunningAppId();
@@ -69,6 +74,8 @@ private:
     QVector<NvApp> getVisibleApps(const QVector<NvApp>& appList);
 
     bool isAppCurrentlyVisible(const NvApp& app);
+
+    void stampPlayed(int appId);
 
     NvComputer* m_Computer;
     BoxArtManager m_BoxArtManager;

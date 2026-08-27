@@ -113,6 +113,12 @@ reviews and commits by territory.
 - A SteamGridDB API key. Artwork enrichment is implemented and has never once
   executed.
 - Whether publishing moves into CI. Today releases are built and signed by hand
-  on the workstation, and the signing key exists in exactly one place:
-  `~/.gnupg-moonvibe` in WSL, no passphrase, not backed up. If it is lost every
-  client has to re-add the remote.
+  on the workstation. The signing key lives in `~/.gnupg-moonvibe` in WSL (no
+  passphrase). **Backed up 2026-08-27** to Brulu at
+  `/mnt/user/backups/moonvibe-signing-key/` (secret + public + revocation
+  cert + README, root-only) and to Dexter's password manager as a secure note.
+  Fingerprint `785BBE7716BB900CD617068ABE0C25EEC5D42FC3`. Restore on a new box:
+  `mkdir -m700 ~/.gnupg-moonvibe && gpg --homedir ~/.gnupg-moonvibe --import
+  moonvibe-repo-signing-SECRET.asc`, then import ownertrust
+  `785BBE…2FC3:6:`. If the key is ever lost *and* both backups are gone,
+  every installed client has to re-add the remote.
