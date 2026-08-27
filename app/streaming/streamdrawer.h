@@ -92,6 +92,7 @@ private:
     void drawSectionLabel(SDL_Surface* s, const QString& text, int x, int y);
     void drawPill(SDL_Surface* s, int x, int y, int h, const QString& text, SDL_Color fg, SDL_Color bg, SDL_Color border);
     void drawRowHighlight(SDL_Surface* s, int x, int y, int w, int h, bool selected);
+    void drawRowCard(SDL_Surface* s, int x, int y, int w, int h, bool selected);
 
     QByteArray m_BodyFontData;
     QByteArray m_DisplayFontData;

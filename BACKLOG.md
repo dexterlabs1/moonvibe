@@ -58,7 +58,7 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
 - [ ] "Enable mouse control with gamepads…" is cut — needs 559px in 548px and does not elide
 - [ ] Settings scroll area: pad or fade at the header and footer instead of slicing rows in half
 - [ ] Host screen fills only the top ~300px; the rest of the Deck screen is empty
-- [ ] Drawer: bitrate slider paints outside the panel's left padding
+- [x] Drawer: bitrate slider paints outside the panel's left padding (was the row-selection rail bleeding into the gutter; knob travel now inset too)
 - [ ] Off-token colours where stock Qt shows through (MaterialRipple, ScrollBar, `#ffffff` surfaces)
 
 ## P5 — Polish & publish

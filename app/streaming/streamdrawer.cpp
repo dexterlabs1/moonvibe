@@ -274,8 +274,29 @@ void StreamDrawer::drawRowHighlight(SDL_Surface* s, int x, int y, int w, int h, 
     if (!selected) {
         return;
     }
-    fillRoundedRect(s, x - 10, y - 6, w + 20, h + 12, 10, kPanelHi);
-    fillRoundedRect(s, x - 10, y - 6 + (h + 12) / 2 - 9, 3, 18, 2, kAccent);
+
+    // Everything in the panel aligns to the kPad content inset, so the selected
+    // row has to as well. The previous version bled 10 px into the left gutter
+    // and parked a 3 px accent rail on that bleed -- the only accent-coloured
+    // thing outside the content column, at the height of the bitrate slider,
+    // which read as a stray mark beside the track rather than as a selected row.
+    // Selection is an accent wash bounded by the content box. It is deliberately
+    // a soft fill and not an outline: the row's own contents start and end
+    // exactly on that box -- the section label at x, the value right-aligned to
+    // x + w, the slider knob at either end of its travel -- so a hard 1 px edge
+    // there merges with the first refresh-rate button's border and with the knob
+    // at minimum bitrate. Insetting the outline instead is worse: at 4 px it
+    // runs straight through the "BITRATE" label. A wash has no edge to collide.
+    fillRoundedRect(s, x, y - 6, w, h + 12, 10, withAlpha(kAccent, 0x14));
+}
+
+void StreamDrawer::drawRowCard(SDL_Surface* s, int x, int y, int w, int h, bool selected)
+{
+    // A row that is its own card cannot take the wash above -- it would paint
+    // over it. It carries the selection on its own edge instead, which is again
+    // what the QML capsules do.
+    fillRoundedRect(s, x, y, w, h, 9, selected ? kPanelHi : kPanel);
+    strokeRoundedRect(s, x, y, w, h, 9, selected ? 2 : 1, selected ? kAccent : kLine);
 }
 
 SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
@@ -352,7 +373,9 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
     y += 78;
 
     // ---- Bitrate ----
-    drawRowHighlight(s, kPad, y, w - kPad * 2, 58, m_Selected == RowBitrate);
+    // The row's height is the label and the slider, not the gap to the next
+    // section: at 58 the highlight ran under the DISPLAY label below it.
+    drawRowHighlight(s, kPad, y, w - kPad * 2, 40, m_Selected == RowBitrate);
     drawSectionLabel(s, QStringLiteral("Bitrate"), kPad, y);
     drawPill(s, kPad + 92, y - 3, 20, QStringLiteral("LIVE"), kAccent,
              withAlpha(kAccent, 0x24), withAlpha(kAccent, 0x66));
@@ -362,12 +385,17 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
     y += 26;
 
     // Track and fill
-    fillRoundedRect(s, kPad, y, w - kPad * 2, 8, 4, kPanelHi);
+    const int trackW = w - kPad * 2;
+    const int knobR = 9;
+    fillRoundedRect(s, kPad, y, trackW, 8, 4, kPanelHi);
     float frac = m_Status.bitrateMaxKbps > 0
             ? qBound(0.0f, float(m_Status.bitrateKbps) / m_Status.bitrateMaxKbps, 1.0f) : 0.0f;
-    fillRoundedRect(s, kPad, y, int((w - kPad * 2) * frac), 8, 4, kAccent);
-    int knobX = kPad + int((w - kPad * 2) * frac);
-    fillRoundedRect(s, knobX - 9, y - 5, 18, 18, 9, kText);
+    // The knob's centre travels the track inset by its own radius at both ends,
+    // so at 0 % it does not hang 9 px past the content inset into the gutter
+    // (and at 100 % not past the right one). The fill runs to that centre.
+    int knobX = kPad + knobR + int((trackW - knobR * 2) * frac);
+    fillRoundedRect(s, kPad, y, knobX - kPad, 8, 4, kAccent);
+    fillRoundedRect(s, knobX - knobR, y - 5, knobR * 2, 18, knobR, kText);
     fillRoundedRect(s, knobX - 6, y - 2, 12, 12, 6, kAccent);
     y += 34;
 
@@ -391,9 +419,7 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
     y += 48;
 
     // HDR row
-    drawRowHighlight(s, kPad, y, w - kPad * 2, 40, m_Selected == RowHdr);
-    fillRoundedRect(s, kPad, y, w - kPad * 2, 40, 9, kPanel);
-    strokeRoundedRect(s, kPad, y, w - kPad * 2, 40, 9, 1, kLine);
+    drawRowCard(s, kPad, y, w - kPad * 2, 40, m_Selected == RowHdr);
     drawText(s, m_FontLabel, QStringLiteral("HDR"), kPad + 14, y + 11, kText);
     drawText(s, m_FontMicro, QStringLiteral("reconnects"),
              w - kPad - 76 - textWidth(m_FontMicro, QStringLiteral("reconnects")), y + 13, kTextFaint);
@@ -413,9 +439,7 @@ SDL_Surface* StreamDrawer::render(int windowWidth, int windowHeight)
         {"Mic",  !m_Status.micMuted,   "live", "muted", RowMic},
     };
     for (const Toggle& t : toggles) {
-        drawRowHighlight(s, kPad, y, w - kPad * 2, 40, m_Selected == t.row);
-        fillRoundedRect(s, kPad, y, w - kPad * 2, 40, 9, kPanel);
-        strokeRoundedRect(s, kPad, y, w - kPad * 2, 40, 9, 1, kLine);
+        drawRowCard(s, kPad, y, w - kPad * 2, 40, m_Selected == t.row);
         drawText(s, m_FontLabel, QString::fromUtf8(t.label), kPad + 14, y + 11, kText);
         const QString state = QString::fromUtf8(t.on ? t.onText : t.offText);
         drawText(s, m_FontLabel, state, w - kPad - 14 - textWidth(m_FontLabel, state), y + 11,
