@@ -313,6 +313,10 @@ void DelayedFlushThread::run() {
 
 void ComputerManager::saveHosts()
 {
+    if (m_FixtureMode) {
+        return;
+    }
+
     Q_ASSERT(m_DelayedFlushThread != nullptr && m_DelayedFlushThread->isRunning());
 
     // Punt to a worker thread because QSettings on macOS can take ages (> 500 ms)
@@ -358,8 +362,24 @@ QHostAddress ComputerManager::getBestGlobalAddressV6(QVector<QHostAddress> &addr
     return QHostAddress();
 }
 
+void ComputerManager::addFixtureHost(NvComputer* computer)
+{
+    m_FixtureMode = true;
+
+    {
+        QWriteLocker lock(&m_Lock);
+        m_KnownHosts[computer->uuid] = computer;
+    }
+
+    emit computerStateChanged(computer);
+}
+
 void ComputerManager::startPolling()
 {
+    if (m_FixtureMode) {
+        return;
+    }
+
     QWriteLocker lock(&m_Lock);
 
     if (++m_PollingRef > 1) {
@@ -461,6 +481,10 @@ void ComputerManager::handleMdnsServiceResolved(MdnsPendingComputer* computer,
 
 void ComputerManager::saveHost(NvComputer *computer)
 {
+    if (m_FixtureMode) {
+        return;
+    }
+
     // If no serializable properties changed, don't bother saving hosts
     QMutexLocker lock(&m_DelayedFlushMutex);
     QReadLocker computerLock(&computer->lock);

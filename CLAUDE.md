@@ -27,17 +27,46 @@ Runtime QML modules (needed to actually launch): `qml6-module-qtquick-controls
 qml6-module-qtquick-templates qml6-module-qtquick-layouts
 qml6-module-qtqml-workerscript qml6-module-qtquick-window qml6-module-qtquick`.
 
-**Visual smoke test harness** (QML errors only appear at runtime):
+## Look at your work: `tools/shoot/review.sh`
+
+Every screen, captured offscreen, plus a design lint over what was rendered:
+
 ```bash
-Xvfb :99 -screen 0 1280x800x24 &                     # apt: xvfb imagemagick xdotool
-DISPLAY=:99 QML_DISK_CACHE_PATH=/tmp/qmlcache ./moonvibe > /tmp/ui.log 2>&1 &
-sleep 8 && DISPLAY=:99 import -window root shot.png  # then Read the png
-DISPLAY=:99 xdotool key Return                        # dismiss the no-GPU decoder dialog
-grep "failed to load component" /tmp/ui.log           # must be absent
+tools/shoot/review.sh --out /mnt/c/Users/<you>/AppData/Local/Temp/moonvibe-review
+tools/shoot/review.sh --no-build --shot settings --out <dir>   # one screen, fast
 ```
-Gotchas: relaunch the app after every relink (a stale instance shows old QML —
-check `ps -o lstart` if the UI looks wrong); wipe the QML_DISK_CACHE_PATH dir;
-never `pkill -f` a pattern that matches your own shell command line.
+
+Out comes `<shot>.png` for every state in `tools/shoot/shots.json`, a
+`<shot>.json` scene dump beside it, and `lint.json`. **Read the PNGs.** They are
+the frame Qt produced, not a photograph of a window.
+
+How it works and why to trust it: shoot mode (`app/shoot/`) runs the real binary
+under `QT_QPA_PLATFORM=offscreen` with Qt Quick's **software** rasteriser and
+grabs the frame in-process with `QQuickWindow::grabWindow()`. No display server,
+no GPU, no window manager, no compositor — so none of the failure modes that made
+the old Xvfb harness lie (see ENGINEERING_NOTES: a night was lost to it). Fake
+hosts and apps come from fixtures compiled into the same binary, and settings go
+to a scratch dir wiped per shot, so screens are full and identical run to run.
+
+- **Adding a shot needs no rebuild** — `tools/shoot/shots.json` takes a view, a
+  fixture set, and steps (`key`, `click`, or `eval`, which runs QML in main.qml's
+  scope, so `stackView.push(...)` and `settingsButton.clicked()` work).
+- **`designlint.py`** checks the dumps against `Theme.qml`: off-token colours,
+  type off the ramp or sized in points, text with too little contrast against the
+  pixels actually behind it, text that cannot fit and does not elide, hit targets
+  under `Theme.controlHeight`. Deliberate exceptions go in `lint-ignore.json`
+  with a reason; the linter always prints how many it swallowed.
+- A single run also captures the in-stream drawer (`MOONVIBE_DRAWER_PREVIEW`),
+  which is not QML and renders through its own SDL path.
+- **Known blind spot: `SystemProperties.hasDesktopEnvironment` is false in a
+  shot.** There is no desktop environment offscreen, so anything gated on it (or
+  on `hasBrowser`, which is assigned from it) is missing from the capture — the
+  toolbar's Help button is the live example. main.qml also takes the
+  `showFullScreen()` branch for the same reason, which is why shoot mode resets
+  the window to the shot's size. Check such surfaces on a real launch.
+- **This does not retire the human check.** It answers "is this right?" on its
+  own; the Flatpak on the real Deck still answers "does it work?" — see the
+  verification rule in [docs/HANDOFF.md](docs/HANDOFF.md).
 
 ## Local build (WSL2 on the Windows dev PC) — verified 2026-08-19
 
@@ -59,9 +88,12 @@ make -j$(nproc) release          # binary at ~/build/moonvibe/app/moonvibe
   possible 3200 %. Fine for iteration. For anything heavier, `rsync -a
   --exclude .git --exclude build` the tree to `~/src/moonvibe` first — the
   working tree is only ~9 MB, so the sync is seconds.
-- **Force X11 for the Xvfb harness or the screenshot comes back blank**: WSLg
-  exports a Wayland display and the app takes it in preference to `:99`.
-  `env -u WAYLAND_DISPLAY DISPLAY=:99 QT_QPA_PLATFORM=xcb SDL_VIDEODRIVER=x11 ./moonvibe`
+- **Do not screen-scrape a window to see the UI** — use `tools/shoot/review.sh`
+  above. The old advice here (Xvfb on `:99`, forcing X11 because WSLg's Wayland
+  display wins over `:99`) is kept only as history: that harness produced black
+  frames for a UI that rendered perfectly, and cost a night.
+- To *drive* the app by hand, launch it under WSLg (`./moonvibe`) so the window
+  lands on the Windows desktop, and ask the owner what they see.
 - **Hardware decode works in WSL** — `/dev/dxg` is exposed, FFmpeg selects
   `hevc_cuvid` on the RTX 5090. The "no hardware decoder" dialog that the cloud
   container always raised does NOT appear here, so don't write test steps that
@@ -109,6 +141,10 @@ make -j$(nproc) release          # binary at ~/build/moonvibe/app/moonvibe
   `app/deploy/linux/io.github.dexterlabs1.Moonvibe.desktop`). Version:
   `app/version.txt` (also update the appdata `<releases>` and `updates/qt.json`
   when bumping).
+- `app/shoot/` — offscreen capture mode (`shootmode.cpp` drives a shot,
+  `scenedump.cpp` writes down what was rendered). Compiled into the shipping
+  binary on purpose: a reviewer must look at the same code a user runs. Inert
+  unless `MOONVIBE_SHOOT` names a shot.
 - Submodules (clone with `--recurse-submodules`, 2 levels):
   moonlight-common-c (→ enet fork + nanors), qmdnsengine, SDL_GameControllerDB.
 - `packaging/flatpak/io.github.dexterlabs1.Moonvibe.json` — builds the

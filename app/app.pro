@@ -166,6 +166,8 @@ macx {
 }
 
 SOURCES += \
+    shoot/scenedump.cpp \
+    shoot/shootmode.cpp \
     backend/nvaddress.cpp \
     backend/nvapp.cpp \
     backend/recentapps.cpp \
@@ -212,6 +214,8 @@ SOURCES += \
     wm.cpp
 
 HEADERS += \
+    shoot/scenedump.h \
+    shoot/shootmode.h \
     SDL_compat.h \
     backend/nvaddress.h \
     backend/nvapp.h \

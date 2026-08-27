@@ -51,6 +51,16 @@ Work top to bottom. Phases from [docs/PRODUCT.md](docs/PRODUCT.md) §6.
 - [ ] Suspend/resume resilience + retry-forever auto-reconnect + WoL hardening
 - [ ] 90 Hz OLED pacing polish (refresh-match prompts)
 
+## Design debt (found by `tools/shoot/review.sh`, 2026-08-27)
+- [x] Offscreen review harness: shoot mode + fixtures + scene dump + design linter
+- [ ] Settings on the type ramp: body is 16px (`Theme.fsBody` is 15), toolbar version label is 10pt `Sans Serif`
+- [ ] Raise secondary text contrast: host-card address lines sit at ~2.2:1 on `Theme.panel`
+- [ ] "Enable mouse control with gamepads…" is cut — needs 559px in 548px and does not elide
+- [ ] Settings scroll area: pad or fade at the header and footer instead of slicing rows in half
+- [ ] Host screen fills only the top ~300px; the rest of the Deck screen is empty
+- [ ] Drawer: bitrate slider paints outside the panel's left padding
+- [ ] Off-token colours where stock Qt shows through (MaterialRipple, ScrollBar, `#ffffff` surfaces)
+
 ## P5 — Polish & publish
 - [ ] One-paste installer (Flatpak + Steam shortcut + Decky plugin)
 - [ ] Own flatpak repo + `.flatpakref`; Flathub submission; Decky store submission

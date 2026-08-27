@@ -1,5 +1,87 @@
 # Engineering notes — lessons with full context
 
+## Session 3 (2026-08-27): a harness that can be trusted, and a linter with an opinion
+
+### Stop photographing the window; ask the scene graph for the frame
+
+The August harness took pictures of a screen. Everything that went wrong with it
+went wrong between the app and the picture: Xvfb versus WSLg, X versus Wayland,
+a stale root-window image, an app that died with the shell that launched it.
+
+Shoot mode (`app/shoot/`) removes that gap. The app runs under
+`QT_QPA_PLATFORM=offscreen` with Qt Quick's software rasteriser, and the frame is
+read back with `QQuickWindow::grabWindow()` — the same buffer the scene graph just
+filled. There is no screen to scrape, no compositor to disagree with, no timing
+race with a window manager. The mechanism was proved on a 20-line throwaway Qt app
+before a line of it was written into Moonvibe: render a Rectangle offscreen, grab
+it, check the pixel.
+
+Everything else in the pipeline follows from that:
+
+- **Fixtures live in the binary.** `buildFixtures()` makes three hosts (online +
+  paired with nine apps, offline, unpaired) that never touch the network, so the
+  host screen and library are full and identical every run.
+- **State is scratch and per shot.** `XDG_CONFIG_HOME` and friends are pointed at
+  `<out>/state/<shot>` and wiped first. Discovered the hard way: an app launched
+  by one shot showed up in the next shot's "Continue" row.
+- **The dump is the review surface.** Alongside each PNG, every visible item's
+  geometry, colour, font and text goes into JSON — including, for text, the
+  background colour *sampled out of the rendered frame* behind it. Contrast then
+  needs no guesswork about which Rectangle is really underneath.
+
+### The offscreen platform renders flat out, and that killed the first version
+
+The driver waited for `afterRendering`, then disconnected and deleted its own
+`QMetaObject::Connection`. Under WSLg this worked. Under offscreen it segfaulted
+every time, about a second in, with no output of its own.
+
+Offscreen has no vsync: frames are produced back-to-back, so several queued
+deliveries of the same signal are already in flight when the first one runs. The
+second one reads a `Connection` the first one freed. The fix is a plain guard flag
+("have I started?"), not unhooking. General rule: with a queued once-only
+connection, guard, never self-destruct.
+
+The diagnosis took one build because shoot mode now installs a `SIGSEGV` handler
+that prints a backtrace, and traces each milestone (`prepared`, `window ready`,
+`first frame`, `step n`, `grabbing`, `wrote`). A silent death is the thing that
+cost a night last time; this one says how far it got.
+
+### Two fixture traps that looked like UI bugs
+
+- **A `directLaunch` app auto-starts.** With one paired host, the host screen goes
+  straight in and launches it, so the library shot captured "Starting Steam Big
+  Picture…". Fixtures now never set `directLaunch`.
+- **`getComputers()` sorts by name, not insertion.** `computerIndex: 0` was
+  COUCH-PC (offline, no apps), which rendered a legitimately empty library that
+  looked like a broken model. Library shots use the single-host fixture.
+
+### The one thing a shot cannot show you
+
+Side by side with a live WSLg launch, the captures were identical except for one
+control: the toolbar's Help button, which the owner had and the shots did not.
+`helpButton.visible: SystemProperties.hasBrowser`, and `hasBrowser` is assigned
+from `hasDesktopEnvironment`, which is false when there is no display server.
+Same reason main.qml calls `showFullScreen()` in a shot, which is why the driver
+resets the window to the shot's size afterwards.
+
+So: anything conditioned on there being a desktop environment renders differently
+offscreen. That is the harness's honest limit, and it is a small one — but it has
+to be known, or a missing button reads as a regression.
+
+### What the linter is for
+
+`tools/shoot/designlint.py` reads the dumps and `Theme.qml` and reports what eyes
+miss: 16px body text where the ramp says 15, `Sans Serif` where a surface fell
+back to stock Qt, 2.2:1 contrast on a host card's address line, a checkbox label
+that needs 559px in a 548px slot and does not elide. Findings are grouped by kind
+with a count — forty off-token colours on one screen is one decision, not forty —
+and deliberate exceptions live in `lint-ignore.json` with a reason, always
+reported as a suppressed count. An exception nobody can see is indistinguishable
+from a bug nobody noticed.
+
+It does not judge whether a screen is any good. That still needs someone to look
+at the PNGs; the point is that they now exist, on demand, for every state.
+
 ## Session 2 (2026-08-19/20): local builds, the drawer, and a night lost to a lying harness
 
 ### The headline lesson: the screenshot harness was wrong, not the product

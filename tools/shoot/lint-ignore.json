@@ -1,0 +1,19 @@
+{
+  "_comment": [
+    "Deliberate exceptions for tools/shoot/designlint.py.",
+    "",
+    "Every entry needs a reason, and the linter always prints how many findings",
+    "each one swallowed -- an exception nobody can see is indistinguishable from",
+    "a bug nobody noticed. Match on rule, plus any of bucket, pathContains, shot.",
+    "",
+    "Do not add an entry to quieten something that is simply wrong. Fix the UI."
+  ],
+
+  "ignore": [
+    {
+      "rule": "contrast-low",
+      "pathContains": "NavigableItemDelegate > Rectangle > Rectangle > Text",
+      "reason": "monogram initials on placeholder capsules are a watermark, not text to read"
+    }
+  ]
+}

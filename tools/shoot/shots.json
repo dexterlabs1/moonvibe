@@ -1,0 +1,108 @@
+{
+  "_comment": [
+    "Shot definitions for offscreen review captures. One process per shot:",
+    "  MOONVIBE_SHOOT=<name> MOONVIBE_SHOOT_OUT=<dir> ./moonvibe",
+    "tools/shoot/review.sh runs all of them, then the design linter over the dumps.",
+    "",
+    "  view      what main.qml starts on (default qrc:/gui/PcView.qml)",
+    "  fixtures  default (three hosts) | single | none",
+    "  steps     key: a QKeySequence string, sent to the window",
+    "            eval: QML evaluated in main.qml's scope, so ids like stackView work",
+    "            click: [x, y] in window coordinates",
+    "            waitMs: pause after this step (default 150)",
+    "  settleMs  pause before the first step and before the grab",
+    "",
+    "Adding a shot needs no rebuild. Prefer eval over long key sequences: a shot",
+    "that navigates by pressing Down eleven times breaks the day a row is added."
+  ],
+
+  "shots": {
+    "hosts": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default"
+    },
+
+    "hosts-empty": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "none",
+      "settleMs": 900
+    },
+
+    "hosts-focused": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "key": "Down", "waitMs": 250 }
+      ]
+    },
+
+    "host-menu": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "key": "Down", "waitMs": 250 },
+        { "key": "Menu", "waitMs": 400 }
+      ]
+    },
+
+    "library": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "single",
+      "steps": [
+        {
+          "eval": "var c = Qt.createComponent('qrc:/gui/AppView.qml'); stackView.push(c.createObject(stackView, {'computerIndex': 0, 'objectName': 'TOWER'}))",
+          "waitMs": 900
+        }
+      ],
+      "settleMs": 700
+    },
+
+    "library-focused": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "single",
+      "steps": [
+        {
+          "eval": "var c = Qt.createComponent('qrc:/gui/AppView.qml'); stackView.push(c.createObject(stackView, {'computerIndex': 0, 'objectName': 'TOWER'}))",
+          "waitMs": 900
+        },
+        { "key": "Right", "waitMs": 300 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-scrolled": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "eval": "stackView.currentItem.contentY = 900", "waitMs": 400 }
+      ],
+      "settleMs": 700
+    },
+
+    "add-pc": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "addPcDialog.open()", "waitMs": 500 }
+      ]
+    },
+
+    "quit-confirm": {
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "single",
+      "steps": [
+        { "eval": "quitConfirmationDialog.open()", "waitMs": 500 }
+      ]
+    }
+  }
+}

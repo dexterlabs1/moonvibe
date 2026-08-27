@@ -51,12 +51,26 @@ surprising — the traps are recorded there.
    `SettingsSection` in the new Settings using the Mv* components. Capture a
    chord by listening for the next key press, not by typing strings.
 
-4. **Cut 0.7.0** once the owner confirms Settings renders right (see
+4. **Fix what the first review run found** (2026-08-27, all reproducible with
+   `tools/shoot/review.sh`; full list in `lint.json`):
+   - Settings body text is 16px and the toolbar's version label is 10pt
+     `Sans Serif` — the type ramp stops at the surfaces nobody hand-styled.
+   - Secondary text on host cards ("10.0.0.31 · Sunshine") sits at ~2.2:1
+     against the card. `Theme.textFaint` is too faint on `Theme.panel`.
+   - "Enable mouse control with gamepads…" needs 559px in a 548px slot and does
+     not elide, so the label is cut.
+   - Settings content runs under the header and the footer with no padding or
+     fade; a checkbox row is sliced in half at the bottom edge.
+   - The host screen leaves ~500px of empty space below a single row of cards.
+   - The drawer's bitrate slider paints a stray mark outside the panel's left
+     padding.
+
+5. **Cut 0.7.0** once the owner confirms Settings renders right (see
    "Verification" below). Release flow is manual: `~/verify.sh`-style flatpak
    build in WSL, sign with the key in `~/.gnupg-moonvibe`, push gh-pages, gh
    release. Every prior release in git history shows the exact commands.
 
-5. **Keyboard-popup bug**: fixed on the Settings side (SteamGridDB field is
+6. **Keyboard-popup bug**: fixed on the Settings side (SteamGridDB field is
    press-to-edit; dialog fields no longer self-focus). If it still happens in the
    X → App options menu, that is a different cause — `PcView.qml`'s
    `renamePcDialog` still has `editText { focus: true }` (dialog-scoped, likely
@@ -64,11 +78,25 @@ surprising — the traps are recorded there.
 
 ## Verification, the rule
 
-Build locally in WSL, launch with WSLg so the window lands on the owner's
-Windows desktop, and ASK THEM WHAT THEY SEE. Headless pixels lie; app text
-logs (component-load failures, ReferenceError) and qmllint do not. Builders
-work in their own build dirs (`~/build/mv-*`) and never commit — Fable reviews
-and commits by territory.
+Three layers, cheapest first. Do not skip to the last one for a question the
+first can answer.
+
+1. **`tools/shoot/review.sh`** — every screen captured offscreen (real binary,
+   software rasteriser, frame grabbed in-process) plus the design linter. This
+   is now the default way to see a change: it needs no display, no host, no
+   owner, and it produces PNGs to read and a list of token/contrast/fit
+   violations. Details in [CLAUDE.md](../CLAUDE.md#look-at-your-work-toolsshootreviewsh).
+2. **WSLg by hand** — launch `./moonvibe` so the window lands on the owner's
+   Windows desktop when something needs poking at live (input, focus travel,
+   animation feel).
+3. **The Flatpak on the Deck** — the only answer to "does it work", and the
+   only artifact users get. Believe it over the local build.
+
+The old rule said headless pixels lie. They did, because the harness screen-
+scraped a window. It no longer does — but ASK THE OWNER WHAT THEY SEE remains
+correct for anything about the real device: gamescope, HDR, controller feel.
+Builders work in their own build dirs (`~/build/mv-*`) and never commit — Fable
+reviews and commits by territory.
 
 ## Traps that will cost you time if you do not know them
 

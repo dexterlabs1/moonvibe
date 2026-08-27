@@ -58,6 +58,7 @@
 #include "settings/streamingpreferences.h"
 #include "settings/keybindings.h"
 #include "gui/sdlgamepadkeynavigation.h"
+#include "shoot/shootmode.h"
 
 #if defined(Q_OS_WIN32)
 #define IS_UNSPECIFIED_HANDLE(x) ((x) == INVALID_HANDLE_VALUE || (x) == NULL)
@@ -425,6 +426,14 @@ void configureSignalHandlers()
 int main(int argc, char *argv[])
 {
     SDL_SetMainReady();
+
+    // Offscreen capture mode picks the graphics backend, the platform plugin and
+    // a scratch config location. All three have to be set before anything else
+    // reads them: Path::initialize() caches the config and cache directories,
+    // and the platform plugin cannot change once QGuiApplication exists.
+    if (ShootMode::active() && !ShootMode::prepareEnvironment()) {
+        return 1;
+    }
 
     // Set the app version for the QCommandLineParser's showVersion() command
     QCoreApplication::setApplicationVersion(VERSION_STR);
@@ -958,7 +967,11 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<ComputerManager>("ComputerManager", 1, 0,
                                               "ComputerManager",
                                               [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
-                                                  return new ComputerManager(StreamingPreferences::get(qmlEngine));
+                                                  auto* manager = new ComputerManager(StreamingPreferences::get(qmlEngine));
+                                                  if (ShootMode::active()) {
+                                                      ShootMode::installFixtures(manager);
+                                                  }
+                                                  return manager;
                                               });
     qmlRegisterSingletonType<AutoUpdateChecker>("AutoUpdateChecker", 1, 0,
                                                 "AutoUpdateChecker",
@@ -1112,14 +1125,24 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (ShootMode::active()) {
+        initialView = ShootMode::initialView();
+    }
+
     if (hasGUI) {
         engine.rootContext()->setContextProperty("initialView", initialView);
-        engine.rootContext()->setContextProperty("runConfigChecks", commandLineParserResult == GlobalCommandLineParser::NormalStartRequested);
+        engine.rootContext()->setContextProperty("runConfigChecks",
+                                                 commandLineParserResult == GlobalCommandLineParser::NormalStartRequested &&
+                                                 !ShootMode::active());
 
         // Load the main.qml file
         engine.load(QUrl(QStringLiteral("qrc:/gui/main.qml")));
         if (engine.rootObjects().isEmpty())
             return -1;
+
+        if (ShootMode::active()) {
+            ShootMode::begin(&engine);
+        }
     }
 
     int err = app.exec();

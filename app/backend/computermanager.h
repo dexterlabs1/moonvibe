@@ -244,6 +244,12 @@ public:
 
     void clientSideAttributeUpdated(NvComputer* computer);
 
+    // Adds a host that does not exist on the network, for offscreen capture
+    // (see app/shoot). Takes ownership. This also puts the manager into fixture
+    // mode: it will not poll -- polling would find nothing and turn every
+    // fixture offline mid-shot -- and it will not persist the fake hosts.
+    void addFixtureHost(NvComputer* computer);
+
 signals:
     void computerStateChanged(NvComputer* computer);
 
@@ -270,6 +276,7 @@ private:
     void startPollingComputer(NvComputer* computer);
 
     StreamingPreferences* m_Prefs;
+    bool m_FixtureMode = false;
     int m_PollingRef;
     QReadWriteLock m_Lock;
     QMap<QString, NvComputer*> m_KnownHosts;
