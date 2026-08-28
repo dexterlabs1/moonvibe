@@ -2,10 +2,12 @@ import QtQuick 2.9
 
 // A titled block of settings. Replaces GroupBox, whose title sits on the
 // border in the Material palette and drags the whole page back to stock Qt.
-// Here the heading lives outside the card, tracked out in small caps the same
-// way section headers read on the host and library screens.
 //
-// Children are placed directly inside the card:
+// The controls sit directly on the settings pane rather than inside a bordered
+// card: a card here nests a framed box inside the pane, which is itself inside
+// the window -- a "window within a window". A small-caps heading and the
+// whitespace between sections carry the grouping instead, the same way the host
+// and library screens read.
 //
 //   SettingsSection {
 //       width: ...
@@ -17,21 +19,20 @@ Column {
 
     property string title
 
-    // Rhythm between the rows inside the card. A section that is a plain list
-    // of checkboxes wants less than one mixing labels, controls and captions.
+    // Rhythm between the rows. A section that is a plain list of checkboxes
+    // wants less than one mixing labels, controls and captions.
     property int contentSpacing: Theme.sp2
 
     default property alias content: body.data
 
-    spacing: Theme.sp3
+    spacing: Theme.sp4
 
     // Redefining the default property redirects EVERY child declared with
-    // brace syntax into it, including the two below, which would put the card
-    // inside itself. Assigning `data` explicitly is how they stay put.
+    // brace syntax into it, including the two below. Assigning `data` explicitly
+    // is how they stay put.
     data: [
         Text {
             id: heading
-            leftPadding: Theme.sp1
             text: section.title.toUpperCase()
             color: Theme.textMuted
             font.family: Theme.fontBody
@@ -40,26 +41,10 @@ Column {
             font.letterSpacing: 1.9
         },
 
-        Rectangle {
-            id: card
-
-            // The section is always given an explicit width by its parent
-            // column, so this cannot feed back into the Column's implicit width.
+        Column {
+            id: body
             width: section.width
-            height: body.height + Theme.sp5 * 2
-
-            radius: Theme.cardRadius
-            color: Theme.panel
-            border.color: Theme.line
-            border.width: 1
-
-            Column {
-                id: body
-                x: Theme.sp5
-                y: Theme.sp5
-                width: card.width - Theme.sp5 * 2
-                spacing: section.contentSpacing
-            }
+            spacing: section.contentSpacing
         }
     ]
 }
