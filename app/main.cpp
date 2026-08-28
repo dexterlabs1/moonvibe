@@ -56,6 +56,7 @@
 #include "backend/systemproperties.h"
 #include "streaming/session.h"
 #include "settings/streamingpreferences.h"
+#include "settings/settingsprofiles.h"
 #include "settings/keybindings.h"
 #include "gui/sdlgamepadkeynavigation.h"
 #include "shoot/shootmode.h"
@@ -993,6 +994,11 @@ int main(int argc, char *argv[])
                                                    [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
                                                        return StreamingPreferences::get(qmlEngine);
                                                    });
+    qmlRegisterSingletonType<SettingsProfiles>("SettingsProfiles", 1, 0,
+                                               "SettingsProfiles",
+                                               [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
+                                                   return new SettingsProfiles(StreamingPreferences::get(qmlEngine));
+                                               });
     qmlRegisterSingletonType<KeyBindings>("KeyBindings", 1, 0,
                                           "KeyBindings",
                                           [](QQmlEngine*, QJSEngine*) -> QObject* {

@@ -149,6 +149,71 @@
       "settleMs": 700
     },
 
+    "settings-profiles": {
+      "_note": "The profile bar above the rail, with a saved profile selected.",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "eval": "SettingsProfiles.saveAs('Balanced')", "waitMs": 300 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-profiles-bar-focus": {
+      "_note": "Focus on the 'Save as...' button in the bar -- the accent focus ring must be visible.",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "eval": "SettingsProfiles.saveAs('Balanced')", "waitMs": 250 },
+        { "eval": "stackView.currentItem.focusBar()", "waitMs": 150 },
+        { "eval": "stackView.currentItem.focusBarControlAt(2)", "waitMs": 300 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-profiles-saveas": {
+      "_note": "The name-a-profile dialog open, on the design system.",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "eval": "SettingsProfiles.saveAs('Balanced')", "waitMs": 200 },
+        { "eval": "stackView.currentItem.openSaveAsForShot('Low latency')", "waitMs": 500 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-profiles-reset": {
+      "_note": "The reset-to-defaults confirmation dialog.",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "eval": "stackView.currentItem.openResetForShot()", "waitMs": 500 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-profiles-applied": {
+      "_note": "Applying a non-default profile moves the self-initializing combos live: the resolution and fps chips read 1440p / 30 FPS, and no 'modified' tag shows (the re-sync sets currentIndex without writing prefs back).",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "eval": "StreamingPreferences.width = 2560", "waitMs": 30 },
+        { "eval": "StreamingPreferences.height = 1440", "waitMs": 30 },
+        { "eval": "StreamingPreferences.fps = 30", "waitMs": 30 },
+        { "eval": "StreamingPreferences.audioConfig = StreamingPreferences.AC_71_SURROUND", "waitMs": 30 },
+        { "eval": "StreamingPreferences.videoCodecConfig = StreamingPreferences.VCC_FORCE_HEVC", "waitMs": 30 },
+        { "eval": "SettingsProfiles.saveAs('HiFi')", "waitMs": 150 },
+        { "eval": "SettingsProfiles.resetToDefaults()", "waitMs": 200 },
+        { "eval": "SettingsProfiles.apply('HiFi')", "waitMs": 350 }
+      ],
+      "settleMs": 700
+    },
+
     "add-pc": {
       "view": "qrc:/gui/PcView.qml",
       "fixtures": "default",

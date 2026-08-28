@@ -3,6 +3,8 @@
 #include <QObject>
 #include <QRect>
 #include <QQmlEngine>
+#include <QVariant>
+#include <QVariantMap>
 
 class StreamingPreferences : public QObject
 {
@@ -17,6 +19,25 @@ public:
     Q_INVOKABLE void save();
 
     void reload();
+
+    // Stream-quality profile support (see settings/settingsprofiles.{h,cpp}).
+    // These fields are the ones a profile captures: resolution, fps, bitrate,
+    // vsync/pacing, HDR/YUV444, audio and codec config, and packet size.
+    //
+    // applyQualityFields() writes those members from `fields` AND emits their
+    // NOTIFY signals before save(). This is the correct seam for a profile
+    // apply: the QML Q_PROPERTYs are MEMBER...NOTIFY, so writing a member alone
+    // never repaints a binding -- the emit has to happen where the signals live.
+    // Keys are the QML property names (width, height, fps, bitrateKbps,
+    // unlockBitrate, autoAdjustBitrate, enableVsync, framePacing, enableHdr,
+    // enableYUV444, audioConfig, videoCodecConfig, packetSize); missing keys are
+    // left untouched.
+    void applyQualityFields(const QVariantMap& fields);
+
+    // Resets the quality fields to the app defaults -- the same values reload()
+    // falls back to (factored into one place, not a second hardcoded copy) --
+    // then emits and saves. Used by SettingsProfiles::resetToDefaults().
+    void resetQualityFieldsToDefaults();
 
     enum AudioConfig
     {
@@ -246,6 +267,10 @@ signals:
 
 private:
     explicit StreamingPreferences(QQmlEngine *qmlEngine);
+
+    // Emits every NOTIFY signal for a quality field. Shared by
+    // applyQualityFields() and resetQualityFieldsToDefaults().
+    void emitQualityFieldsChanged();
 
     QString getSuffixFromLanguage(Language lang);
 

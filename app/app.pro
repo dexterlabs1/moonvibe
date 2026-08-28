@@ -190,6 +190,7 @@ SOURCES += \
     settings/keybindings.cpp \
     settings/mappingfetcher.cpp \
     settings/streamingpreferences.cpp \
+    settings/settingsprofiles.cpp \
     streaming/input/abstouch.cpp \
     streaming/input/gamepad.cpp \
     streaming/input/input.cpp \
@@ -225,6 +226,7 @@ HEADERS += \
     settings/compatfetcher.h \
     settings/keybindings.h \
     settings/mappingfetcher.h \
+    settings/settingsprofiles.h \
     utils.h \
     backend/computerseeker.h \
     backend/identitymanager.h \

@@ -56,6 +56,30 @@
 
 #define CURRENT_DEFAULT_VER 2
 
+namespace
+{
+// The default values for the stream-quality fields, in one place so reload()'s
+// fallbacks and resetQualityFieldsToDefaults() cannot drift apart. bitrateKbps
+// is intentionally absent: its default is derived from the resolution/fps/YUV
+// values via getDefaultBitrate(), not a fixed number.
+struct QualityDefaults
+{
+    int width = 1280;
+    int height = 720;
+    int fps = 60;
+    bool enableYUV444 = false;
+    bool unlockBitrate = false;
+    bool autoAdjustBitrate = true;
+    bool enableVsync = true;
+    bool framePacing = false;
+    bool enableHdr = false;
+    int packetSize = 0;
+    StreamingPreferences::AudioConfig audioConfig = StreamingPreferences::AC_STEREO;
+    StreamingPreferences::VideoCodecConfig videoCodecConfig = StreamingPreferences::VCC_AUTO;
+};
+const QualityDefaults k_QualityDefaults;
+}
+
 static StreamingPreferences* s_GlobalPrefs;
 
 Q_GLOBAL_STATIC(QReadWriteLock, s_GlobalPrefsLock)
@@ -123,14 +147,14 @@ void StreamingPreferences::reload()
     }
 #endif
 
-    width = settings.value(SER_WIDTH, 1280).toInt();
-    height = settings.value(SER_HEIGHT, 720).toInt();
-    fps = settings.value(SER_FPS, 60).toInt();
-    enableYUV444 = settings.value(SER_YUV444, false).toBool();
+    width = settings.value(SER_WIDTH, k_QualityDefaults.width).toInt();
+    height = settings.value(SER_HEIGHT, k_QualityDefaults.height).toInt();
+    fps = settings.value(SER_FPS, k_QualityDefaults.fps).toInt();
+    enableYUV444 = settings.value(SER_YUV444, k_QualityDefaults.enableYUV444).toBool();
     bitrateKbps = settings.value(SER_BITRATE, getDefaultBitrate(width, height, fps, enableYUV444)).toInt();
-    unlockBitrate = settings.value(SER_UNLOCK_BITRATE, false).toBool();
-    autoAdjustBitrate = settings.value(SER_AUTOADJUSTBITRATE, true).toBool();
-    enableVsync = settings.value(SER_VSYNC, true).toBool();
+    unlockBitrate = settings.value(SER_UNLOCK_BITRATE, k_QualityDefaults.unlockBitrate).toBool();
+    autoAdjustBitrate = settings.value(SER_AUTOADJUSTBITRATE, k_QualityDefaults.autoAdjustBitrate).toBool();
+    enableVsync = settings.value(SER_VSYNC, k_QualityDefaults.enableVsync).toBool();
     gameOptimizations = settings.value(SER_GAMEOPTS, true).toBool();
     playAudioOnHost = settings.value(SER_HOSTAUDIO, false).toBool();
     multiController = settings.value(SER_MULTICONT, true).toBool();
@@ -139,27 +163,27 @@ void StreamingPreferences::reload()
     quitAppAfter = settings.value(SER_QUITAPPAFTER, false).toBool();
     absoluteMouseMode = settings.value(SER_ABSMOUSEMODE, false).toBool();
     absoluteTouchMode = settings.value(SER_ABSTOUCHMODE, true).toBool();
-    framePacing = settings.value(SER_FRAMEPACING, false).toBool();
+    framePacing = settings.value(SER_FRAMEPACING, k_QualityDefaults.framePacing).toBool();
     connectionWarnings = settings.value(SER_CONNWARNINGS, true).toBool();
     configurationWarnings = settings.value(SER_CONFWARNINGS, true).toBool();
     richPresence = settings.value(SER_RICHPRESENCE, true).toBool();
     gamepadMouse = settings.value(SER_GAMEPADMOUSE, true).toBool();
     detectNetworkBlocking = settings.value(SER_DETECTNETBLOCKING, true).toBool();
     showPerformanceOverlay = settings.value(SER_SHOWPERFOVERLAY, false).toBool();
-    packetSize = settings.value(SER_PACKETSIZE, 0).toInt();
+    packetSize = settings.value(SER_PACKETSIZE, k_QualityDefaults.packetSize).toInt();
     swapMouseButtons = settings.value(SER_SWAPMOUSEBUTTONS, false).toBool();
     muteOnFocusLoss = settings.value(SER_MUTEONFOCUSLOSS, false).toBool();
     backgroundGamepad = settings.value(SER_BACKGROUNDGAMEPAD, false).toBool();
     reverseScrollDirection = settings.value(SER_REVERSESCROLL, false).toBool();
     swapFaceButtons = settings.value(SER_SWAPFACEBUTTONS, false).toBool();
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
-    enableHdr = settings.value(SER_HDR, false).toBool();
+    enableHdr = settings.value(SER_HDR, k_QualityDefaults.enableHdr).toBool();
     captureSysKeysMode = static_cast<CaptureSysKeysMode>(settings.value(SER_CAPTURESYSKEYS,
                                                          static_cast<int>(CaptureSysKeysMode::CSK_OFF)).toInt());
     audioConfig = static_cast<AudioConfig>(settings.value(SER_AUDIOCFG,
-                                                  static_cast<int>(AudioConfig::AC_STEREO)).toInt());
+                                                  static_cast<int>(k_QualityDefaults.audioConfig)).toInt());
     videoCodecConfig = static_cast<VideoCodecConfig>(settings.value(SER_VIDEOCFG,
-                                                  static_cast<int>(VideoCodecConfig::VCC_AUTO)).toInt());
+                                                  static_cast<int>(k_QualityDefaults.videoCodecConfig)).toInt());
     videoDecoderSelection = static_cast<VideoDecoderSelection>(settings.value(SER_VIDEODEC,
                                                   static_cast<int>(VideoDecoderSelection::VDS_AUTO)).toInt());
     rendererSelection = static_cast<RendererSelection>(settings.value(SER_RENDERER,
@@ -365,6 +389,87 @@ void StreamingPreferences::save()
     settings.setValue(SER_SWAPFACEBUTTONS, swapFaceButtons);
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
+}
+
+void StreamingPreferences::emitQualityFieldsChanged()
+{
+    // displayModeChanged covers width, height and fps (they share it).
+    emit displayModeChanged();
+    emit bitrateChanged();
+    emit unlockBitrateChanged();
+    emit autoAdjustBitrateChanged();
+    emit enableVsyncChanged();
+    emit framePacingChanged();
+    emit enableHdrChanged();
+    emit enableYUV444Changed();
+    emit audioConfigChanged();
+    emit videoCodecConfigChanged();
+}
+
+void StreamingPreferences::applyQualityFields(const QVariantMap& fields)
+{
+    if (fields.contains(QStringLiteral("width"))) {
+        width = fields.value(QStringLiteral("width")).toInt();
+    }
+    if (fields.contains(QStringLiteral("height"))) {
+        height = fields.value(QStringLiteral("height")).toInt();
+    }
+    if (fields.contains(QStringLiteral("fps"))) {
+        fps = fields.value(QStringLiteral("fps")).toInt();
+    }
+    if (fields.contains(QStringLiteral("bitrateKbps"))) {
+        bitrateKbps = fields.value(QStringLiteral("bitrateKbps")).toInt();
+    }
+    if (fields.contains(QStringLiteral("unlockBitrate"))) {
+        unlockBitrate = fields.value(QStringLiteral("unlockBitrate")).toBool();
+    }
+    if (fields.contains(QStringLiteral("autoAdjustBitrate"))) {
+        autoAdjustBitrate = fields.value(QStringLiteral("autoAdjustBitrate")).toBool();
+    }
+    if (fields.contains(QStringLiteral("enableVsync"))) {
+        enableVsync = fields.value(QStringLiteral("enableVsync")).toBool();
+    }
+    if (fields.contains(QStringLiteral("framePacing"))) {
+        framePacing = fields.value(QStringLiteral("framePacing")).toBool();
+    }
+    if (fields.contains(QStringLiteral("enableHdr"))) {
+        enableHdr = fields.value(QStringLiteral("enableHdr")).toBool();
+    }
+    if (fields.contains(QStringLiteral("enableYUV444"))) {
+        enableYUV444 = fields.value(QStringLiteral("enableYUV444")).toBool();
+    }
+    if (fields.contains(QStringLiteral("audioConfig"))) {
+        audioConfig = static_cast<AudioConfig>(fields.value(QStringLiteral("audioConfig")).toInt());
+    }
+    if (fields.contains(QStringLiteral("videoCodecConfig"))) {
+        videoCodecConfig = static_cast<VideoCodecConfig>(fields.value(QStringLiteral("videoCodecConfig")).toInt());
+    }
+    if (fields.contains(QStringLiteral("packetSize"))) {
+        packetSize = fields.value(QStringLiteral("packetSize")).toInt();
+    }
+
+    emitQualityFieldsChanged();
+    save();
+}
+
+void StreamingPreferences::resetQualityFieldsToDefaults()
+{
+    width = k_QualityDefaults.width;
+    height = k_QualityDefaults.height;
+    fps = k_QualityDefaults.fps;
+    enableYUV444 = k_QualityDefaults.enableYUV444;
+    bitrateKbps = getDefaultBitrate(width, height, fps, enableYUV444);
+    unlockBitrate = k_QualityDefaults.unlockBitrate;
+    autoAdjustBitrate = k_QualityDefaults.autoAdjustBitrate;
+    enableVsync = k_QualityDefaults.enableVsync;
+    framePacing = k_QualityDefaults.framePacing;
+    enableHdr = k_QualityDefaults.enableHdr;
+    audioConfig = k_QualityDefaults.audioConfig;
+    videoCodecConfig = k_QualityDefaults.videoCodecConfig;
+    packetSize = k_QualityDefaults.packetSize;
+
+    emitQualityFieldsChanged();
+    save();
 }
 
 int StreamingPreferences::getDefaultBitrate(int width, int height, int fps, bool yuv444)

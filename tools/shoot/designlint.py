@@ -240,8 +240,12 @@ def check_shot(dump, theme, findings):
                 )
 
             # Contrast, against the background actually rendered behind the text.
+            # Skip text that is effectively invisible: a fully transparent colour
+            # paints nothing, so it has no contrast to fail (e.g. the Material
+            # placeholder MvTextField hides behind its own drawn one). rgb()
+            # discards the alpha, so this guard has to consult it separately.
             fg, bg = rgb(color), rgb(node.get("bgSampled"))
-            if fg and bg:
+            if fg and bg and alpha_of(color) > 8:
                 ratio = contrast_ratio(fg, bg)
                 # Point sizes come through negative; WCAG's large-text threshold
                 # is in pixels.

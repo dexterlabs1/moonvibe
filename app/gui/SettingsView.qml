@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.2
 import QtQuick.Window 2.2
 
 import StreamingPreferences 1.0
+import SettingsProfiles 1.0
 import ComputerManager 1.0
 import SdlGamepadKeyNavigation 1.0
 import SystemProperties 1.0
@@ -15,11 +16,18 @@ FocusScope {
     signal languageChanged()
 
     // Which zone owns focus. Drives the footer hints and, at each transition,
-    // the gamepad nav mode: the rail wants real arrow keys, the pane's controls
-    // travel by Tab, so the two cannot share one nav setting.
+    // the gamepad nav mode: the rail and the profile bar want real arrow keys,
+    // the pane's controls travel by Tab, so the two cannot share one nav setting.
     property bool paneFocused: false
 
-    property var navHints: paneFocused
+    // The profile bar is a third focus zone, above the rail. It travels by real
+    // arrow keys like the rail, so it shares the rail's nav mode (off/arrows) and
+    // no mode switch happens moving between the bar and the rail.
+    property bool barFocused: false
+
+    property var navHints: barFocused
+        ? [ { b: "A", t: qsTr("Select") }, { b: "B", t: qsTr("Back") } ]
+        : paneFocused
         ? [ { b: "A", t: qsTr("Change") }, { b: "B", t: qsTr("Back") } ]
         : [ { b: "A", t: qsTr("Open") },   { b: "B", t: qsTr("Back") } ]
 
@@ -46,6 +54,19 @@ FocusScope {
     property alias paneContentY: pane.contentY
     function scrollPaneToBottom() {
         pane.contentY = Math.max(0, pane.contentHeight - pane.height)
+    }
+
+    // Exposed for review shots (like scrollPaneToBottom above): open the profile
+    // dialogs without a gamepad. Assigning the field's text bypasses its
+    // press-to-edit read-only guard, which only blocks typed input.
+    function openSaveAsForShot(name) {
+        saveProfileDialog.open()
+        if (name) {
+            profileNameField.text = name
+        }
+    }
+    function openResetForShot() {
+        resetProfileDialog.open()
     }
 
     // The first focusable control in each category. Entering the pane lands
@@ -77,6 +98,7 @@ FocusScope {
         // Real arrow keys for the rail, not Tab-nav.
         SdlGamepadKeyNavigation.setUiNavMode(false)
         paneFocused = false
+        barFocused = false
         var item = railRepeater.itemAt(currentCategory)
         if (item) {
             item.forceActiveFocus()
@@ -88,10 +110,52 @@ FocusScope {
         // while we are inside it.
         SdlGamepadKeyNavigation.setUiNavMode(true)
         paneFocused = true
+        barFocused = false
         var ctrl = firstControlFor(currentCategory)
         if (ctrl && ctrl.visible) {
             ctrl.forceActiveFocus(Qt.TabFocus)
         }
+    }
+
+    // ---- Profile bar focus zone --------------------------------------------
+    // Left-to-right order of the bar's controls, for arrow-key travel. Disabled
+    // or hidden controls (e.g. Save when nothing is modified) are skipped.
+    property var barControls: [profileCombo, saveButton, saveAsButton, resetButton]
+
+    function focusBar() {
+        // Same nav mode as the rail (arrows); land on the first usable control.
+        SdlGamepadKeyNavigation.setUiNavMode(false)
+        paneFocused = false
+        barFocused = true
+        focusBarControlAt(0)
+    }
+
+    // Focus barControls[i], skipping rightward over any that are disabled or
+    // hidden. Used to enter the bar and, from a shot, to land on one control.
+    function focusBarControlAt(i) {
+        var n = barControls.length
+        while (i >= 0 && i < n && (!barControls[i].enabled || !barControls[i].visible)) {
+            i++
+        }
+        if (i < 0 || i >= n) {
+            return
+        }
+        barFocused = true
+        barControls[i].forceActiveFocus()
+    }
+
+    // Move focus within the bar from `from` by `delta` (+1 right, -1 left),
+    // skipping disabled/hidden controls. Stops at the ends.
+    function moveBar(from, delta) {
+        var n = barControls.length
+        var i = from + delta
+        while (i >= 0 && i < n && (!barControls[i].enabled || !barControls[i].visible)) {
+            i += delta
+        }
+        if (i < 0 || i >= n) {
+            return
+        }
+        barControls[i].forceActiveFocus()
     }
 
     function switchCategory(delta) {
@@ -141,11 +205,166 @@ FocusScope {
         StreamingPreferences.save()
     }
 
+    // ---- Profile bar -------------------------------------------------------
+    // A slim strip across the top, above both the rail and the pane: the profile
+    // picker and its Save / Save as / Reset actions, plus a "modified" tag when
+    // the live quality settings drift from the active profile.
+    Rectangle {
+        id: profileBar
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: Theme.controlHeight + Theme.sp3 * 2
+        color: Theme.bgRaised
+
+        // Divider below the bar, matching the rail's own right-edge divider.
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 1
+            color: Theme.line
+        }
+
+        Row {
+            id: profileBarRow
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.sp5
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.sp3
+
+            MvComboBox {
+                id: profileCombo
+                width: 200
+                model: SettingsProfiles.names
+
+                // What the chip reads: the active profile, or a stand-in when
+                // none is active (the live settings match no saved profile).
+                displayText: SettingsProfiles.activeProfile !== ""
+                    ? SettingsProfiles.activeProfile
+                    : (SettingsProfiles.names.length > 0 ? qsTr("Custom") : qsTr("(unsaved)"))
+
+                function syncIndex() {
+                    currentIndex = SettingsProfiles.names.indexOf(SettingsProfiles.activeProfile)
+                }
+
+                Component.onCompleted: syncIndex()
+
+                // currentIndex tracks the active profile for popup highlight. It
+                // is resynced imperatively (rather than bound) so a user picking
+                // an entry doesn't break the binding.
+                Connections {
+                    target: SettingsProfiles
+                    function onActiveProfileChanged() { profileCombo.syncIndex() }
+                    function onNamesChanged() { profileCombo.syncIndex() }
+                }
+
+                onActivated: {
+                    var chosen = SettingsProfiles.names[currentIndex]
+                    if (chosen !== undefined) {
+                        SettingsProfiles.apply(chosen)
+                    }
+                }
+
+                // Arrow-key travel for the bar zone. While the popup is open the
+                // ComboBox drives its own list, so bow out then.
+                Keys.onPressed: {
+                    if (profileCombo.popup.visible) {
+                        return
+                    }
+                    switch (event.key) {
+                    case Qt.Key_Up:
+                    case Qt.Key_Left:
+                        // Top-left of the bar: nowhere to go, but swallow so the
+                        // ComboBox doesn't treat Up as a selection change.
+                        event.accepted = true
+                        break
+                    case Qt.Key_Down:
+                        settingsPage.focusRail()
+                        event.accepted = true
+                        break
+                    case Qt.Key_Right:
+                        settingsPage.moveBar(0, 1)
+                        event.accepted = true
+                        break
+                    case Qt.Key_Return:
+                    case Qt.Key_Enter:
+                    case Qt.Key_Space:
+                        profileCombo.popup.open()
+                        event.accepted = true
+                        break
+                    }
+                }
+            }
+
+            MvButton {
+                id: saveButton
+                text: qsTr("Save")
+                // Only meaningful when there is an active profile to overwrite
+                // and it has actually drifted.
+                enabled: SettingsProfiles.activeProfile !== "" && SettingsProfiles.modified
+                onClicked: {
+                    SettingsProfiles.saveActive()
+                    // Save disables itself once saved; move focus off it.
+                    settingsPage.focusBarControlAt(0)
+                }
+                Keys.onLeftPressed: settingsPage.moveBar(1, -1)
+                Keys.onRightPressed: settingsPage.moveBar(1, 1)
+                Keys.onDownPressed: settingsPage.focusRail()
+            }
+
+            MvButton {
+                id: saveAsButton
+                text: qsTr("Save as…")
+                onClicked: saveProfileDialog.open()
+                Keys.onLeftPressed: settingsPage.moveBar(2, -1)
+                Keys.onRightPressed: settingsPage.moveBar(2, 1)
+                Keys.onDownPressed: settingsPage.focusRail()
+            }
+
+            MvButton {
+                id: resetButton
+                text: qsTr("Reset to defaults")
+                onClicked: resetProfileDialog.open()
+                Keys.onLeftPressed: settingsPage.moveBar(3, -1)
+                Keys.onRightPressed: settingsPage.moveBar(3, 1)
+                Keys.onDownPressed: settingsPage.focusRail()
+            }
+        }
+
+        // "modified" tag, right-aligned.
+        Row {
+            id: modifiedTag
+            visible: SettingsProfiles.modified
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.sp5
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.sp2
+
+            Rectangle {
+                width: 6
+                height: 6
+                radius: 3
+                color: Theme.accent
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("modified")
+                color: Theme.textMuted
+                font.family: Theme.fontBody
+                font.pixelSize: Theme.fsLabel
+                font.weight: Font.DemiBold
+            }
+        }
+    }
+
     // ---- Category rail -----------------------------------------------------
     Rectangle {
         id: railBg
         anchors.left: parent.left
-        anchors.top: parent.top
+        anchors.top: profileBar.bottom
         anchors.bottom: parent.bottom
         width: 248
         color: Theme.bgRaised
@@ -221,7 +440,15 @@ FocusScope {
                     }
 
                     // Rail nav mode is off, so the D-pad arrives as real arrows.
-                    Keys.onUpPressed: settingsPage.railTo(index - 1)
+                    // From the top category, Up crosses into the profile bar.
+                    Keys.onUpPressed: {
+                        if (index === 0) {
+                            settingsPage.focusBar()
+                        }
+                        else {
+                            settingsPage.railTo(index - 1)
+                        }
+                    }
                     Keys.onDownPressed: settingsPage.railTo(index + 1)
                     // A (Return) or Right enters the pane.
                     Keys.onReturnPressed: settingsPage.enterPane()
@@ -245,7 +472,7 @@ FocusScope {
         id: pane
         anchors.left: railBg.right
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: profileBar.bottom
         anchors.bottom: parent.bottom
 
         boundsBehavior: Flickable.OvershootBounds
@@ -503,6 +730,42 @@ FocusScope {
                         recalculateWidth()
 
                         lastIndexValue = currentIndex
+
+                        // Repaint when a profile apply/reset changes the resolution.
+                        StreamingPreferences.displayModeChanged.connect(resyncFromPrefs)
+                    }
+
+                    // Re-select the row matching the current prefs width/height. Only
+                    // moves currentIndex (never updateBitrateForSelection / activated),
+                    // so it repaints the chip without writing prefs back or recomputing
+                    // bitrate -- which keeps a profile apply from flipping to "modified".
+                    function resyncFromPrefs() {
+                        var w = StreamingPreferences.width
+                        var h = StreamingPreferences.height
+                        for (var i = 0; i < resolutionListModel.count; i++) {
+                            if (resolutionListModel.get(i).is_custom) {
+                                continue
+                            }
+                            var el_w = parseInt(resolutionListModel.get(i).video_width)
+                            var el_h = parseInt(resolutionListModel.get(i).video_height)
+                            if (w === el_w && h === el_h) {
+                                currentIndex = i
+                                lastIndexValue = i
+                                return
+                            }
+                        }
+                        // No listed match: fold the value into the custom row and pick it.
+                        for (var j = 0; j < resolutionListModel.count; j++) {
+                            if (resolutionListModel.get(j).is_custom) {
+                                resolutionListModel.setProperty(j, "video_width", ""+w)
+                                resolutionListModel.setProperty(j, "video_height", ""+h)
+                                resolutionListModel.setProperty(j, "text", qsTr("Custom")+" ("+w+"x"+h+")")
+                                currentIndex = j
+                                lastIndexValue = j
+                                recalculateWidth()
+                                return
+                            }
+                        }
                     }
 
                     id: resolutionComboBox
@@ -921,6 +1184,10 @@ FocusScope {
                     Component.onCompleted: {
                         reinitialize()
                         languageChanged.connect(reinitialize)
+                        // Repaint when a profile apply/reset changes fps. reinitialize()
+                        // only re-matches the saved fps and sets currentIndex -- it never
+                        // calls activated(), so this cannot write prefs back or loop.
+                        StreamingPreferences.displayModeChanged.connect(reinitialize)
                     }
 
                     model: ListModel {
@@ -1216,6 +1483,19 @@ FocusScope {
                         }
                     }
                     activated(currentIndex)
+                    // Repaint when a profile apply/reset changes the audio config.
+                    StreamingPreferences.audioConfigChanged.connect(resyncFromPrefs)
+                }
+
+                // Sets currentIndex only (no activated()), so it repaints the chip
+                // without re-writing prefs -- no write-back loop, no spurious "modified".
+                function resyncFromPrefs() {
+                    for (var i = 0; i < audioListModel.count; i++) {
+                        if (audioListModel.get(i).val === StreamingPreferences.audioConfig) {
+                            currentIndex = i
+                            return
+                        }
+                    }
                 }
 
                 id: audioComboBox
@@ -1930,6 +2210,22 @@ FocusScope {
                     }
 
                     activated(currentIndex)
+                    // Repaint when a profile apply/reset changes the codec.
+                    StreamingPreferences.videoCodecConfigChanged.connect(resyncFromPrefs)
+                }
+
+                // Sets currentIndex only (no activated()), so it repaints the chip
+                // without re-writing prefs -- no write-back loop, no spurious "modified".
+                // Falls back to Automatic (index 0), matching the init default for
+                // values not in the list (e.g. the HDR case).
+                function resyncFromPrefs() {
+                    for (var i = 0; i < codecListModel.count; i++) {
+                        if (codecListModel.get(i).val === StreamingPreferences.videoCodecConfig) {
+                            currentIndex = i
+                            return
+                        }
+                    }
+                    currentIndex = 0
                 }
 
                 id: codecComboBox
@@ -2107,5 +2403,134 @@ FocusScope {
             }
         }
         }
+    }
+
+    // ---- Profile dialogs ---------------------------------------------------
+
+    // Name-a-new-profile dialog. Runs in UI (Tab) nav mode like the pane, so the
+    // d-pad travels field -> OK -> Cancel; the field is press-to-edit so landing
+    // on it doesn't summon the on-screen keyboard.
+    NavigableDialog {
+        id: saveProfileDialog
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        function refreshOkEnabled() {
+            if (saveProfileDialog.standardButton) {
+                saveProfileDialog.standardButton(Dialog.Ok).enabled =
+                    profileNameField.text.trim().length > 0
+            }
+        }
+
+        onOpened: {
+            SdlGamepadKeyNavigation.setUiNavMode(true)
+            // Focus the field but do NOT begin editing (no OSK ambush).
+            profileNameField.forceActiveFocus()
+            refreshOkEnabled()
+        }
+
+        onClosed: {
+            profileNameField.endEditing()
+            profileNameField.clear()
+            SdlGamepadKeyNavigation.setUiNavMode(false)
+            settingsPage.focusBar()
+        }
+
+        onAccepted: {
+            var name = profileNameField.text.trim()
+            if (name.length === 0) {
+                return
+            }
+            // saveAs overwrites a same-named profile and makes it active.
+            SettingsProfiles.saveAs(name)
+        }
+
+        footer: DialogButtonBox {
+            standardButtons: saveProfileDialog.standardButtons
+            alignment: Qt.AlignRight
+            spacing: Theme.sp2
+            padding: Theme.sp5
+            topPadding: Theme.sp4
+
+            background: Item {}
+
+            delegate: Button {
+                id: saveDialogButton
+
+                readonly property bool isPrimary:
+                    DialogButtonBox.buttonRole === DialogButtonBox.AcceptRole
+
+                implicitHeight: Theme.controlHeight
+                leftPadding: Theme.sp5
+                rightPadding: Theme.sp5
+
+                background: Rectangle {
+                    radius: 11
+                    color: !saveDialogButton.enabled ? "transparent"
+                         : saveDialogButton.isPrimary
+                           ? (saveDialogButton.activeFocus ? Qt.lighter(Theme.accent, 1.08) : Theme.accent)
+                           : (saveDialogButton.activeFocus ? Theme.panelHi : "transparent")
+                    border.color: saveDialogButton.isPrimary ? "transparent"
+                                : saveDialogButton.activeFocus ? Theme.accent : Theme.lineHi
+                    border.width: saveDialogButton.isPrimary ? 0 : 1
+                    opacity: saveDialogButton.enabled ? 1.0 : 0.5
+                }
+
+                contentItem: Text {
+                    text: saveDialogButton.text
+                    color: saveDialogButton.isPrimary ? Theme.bg : Theme.textColor
+                    font.family: Theme.fontBody
+                    font.pixelSize: Theme.fsLabel
+                    font.weight: Font.ExtraBold
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    opacity: saveDialogButton.enabled ? 1.0 : 0.5
+                }
+
+                Keys.onReturnPressed: if (enabled) clicked()
+                Keys.onEnterPressed: if (enabled) clicked()
+            }
+        }
+
+        ColumnLayout {
+            spacing: Theme.sp3
+
+            Label {
+                text: qsTr("Save the current stream-quality settings as a profile:")
+                color: Theme.textColor
+                font.family: Theme.fontBody
+                font.pixelSize: Theme.fsBody
+                font.weight: Font.DemiBold
+                wrapMode: Text.Wrap
+                Layout.maximumWidth: 360
+            }
+
+            MvTextField {
+                id: profileNameField
+                activateToEdit: true
+                Layout.preferredWidth: 320
+                placeholderText: qsTr("Profile name")
+
+                onTextChanged: saveProfileDialog.refreshOkEnabled()
+            }
+
+            Label {
+                // gamescope handheld session (the Steam Deck): typing is Steam+X.
+                visible: SystemProperties.isGamingMode
+                text: qsTr("Press Steam + X to type.")
+                color: Theme.textMuted
+                font.family: Theme.fontBody
+                font.pixelSize: Theme.fsLabel
+                wrapMode: Text.Wrap
+            }
+        }
+    }
+
+    // Confirm before discarding the user's current tweaks.
+    NavigableMessageDialog {
+        id: resetProfileDialog
+        standardButtons: Dialog.Yes | Dialog.No
+        text: qsTr("Reset all stream-quality settings to defaults? Saved profiles are kept.")
+        onAccepted: SettingsProfiles.resetToDefaults()
+        onClosed: settingsPage.focusBar()
     }
 }

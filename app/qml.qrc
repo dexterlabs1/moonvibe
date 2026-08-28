@@ -12,6 +12,7 @@
         <file>gui/SettingsSection.qml</file>
         <file>gui/MvCheckBox.qml</file>
         <file>gui/MvComboBox.qml</file>
+        <file>gui/MvButton.qml</file>
         <file>gui/MvSlider.qml</file>
         <file>gui/MvTextField.qml</file>
         <file>gui/MvScrollBar.qml</file>
