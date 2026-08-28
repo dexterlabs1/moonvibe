@@ -79,24 +79,72 @@
       "settleMs": 700
     },
 
-    "settings-focused": {
+    "settings-audio": {
+      "_note": "D-pad Down on the rail moves the selection to Audio and swaps the pane live.",
       "view": "qrc:/gui/PcView.qml",
       "fixtures": "default",
       "steps": [
         { "eval": "settingsButton.clicked()", "waitMs": 900 },
-        { "key": "Tab", "waitMs": 150 },
-        { "key": "Tab", "waitMs": 150 },
+        { "key": "Down", "waitMs": 300 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-pane": {
+      "_note": "Right enters the Display pane (focus on the first control); Tab travels to the next.",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "key": "Right", "waitMs": 250 },
         { "key": "Tab", "waitMs": 300 }
       ],
       "settleMs": 700
     },
 
-    "settings-scrolled": {
+    "settings-advanced": {
+      "_note": "Display category scrolled down: the folded-in ADVANCED SETTINGS card sits below the DISPLAY card and is reachable.",
       "view": "qrc:/gui/PcView.qml",
       "fixtures": "default",
       "steps": [
         { "eval": "settingsButton.clicked()", "waitMs": 900 },
-        { "eval": "stackView.currentItem.contentY = 900", "waitMs": 400 }
+        { "eval": "stackView.currentItem.scrollPaneToBottom()", "waitMs": 400 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-input": {
+      "_note": "Input category (D-pad Down x4): the INPUT card, then the folded-in GAMEPAD SETTINGS card below it.",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 },
+        { "key": "Down", "waitMs": 150 },
+        { "key": "Down", "waitMs": 150 },
+        { "key": "Down", "waitMs": 150 },
+        { "key": "Down", "waitMs": 300 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-desktop": {
+      "_note": "Desktop present, not Gaming Mode: the desktop-only rows (e.g. Display mode) SHOW.",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "env": { "HAS_DESKTOP_ENVIRONMENT": "1" },
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 }
+      ],
+      "settleMs": 700
+    },
+
+    "settings-gaming": {
+      "_note": "Desktop present but Gaming Mode forced on: the same desktop-only rows are ABSENT.",
+      "view": "qrc:/gui/PcView.qml",
+      "fixtures": "default",
+      "env": { "HAS_DESKTOP_ENVIRONMENT": "1", "MOONVIBE_GAMING": "1" },
+      "steps": [
+        { "eval": "settingsButton.clicked()", "waitMs": 900 }
       ],
       "settleMs": 700
     },

@@ -51,6 +51,11 @@ struct Shot
     int settleMs = 500;
     int timeoutMs = 20000;
     QVector<Step> steps;
+    // Extra environment set before the app reads it, so a shot can pin things
+    // that are decided once at startup -- e.g. HAS_DESKTOP_ENVIRONMENT and
+    // MOONVIBE_GAMING for the Gaming-Mode gating, which SystemProperties reads
+    // in its constructor.
+    QVector<QPair<QByteArray, QByteArray>> env;
     bool valid = false;
 };
 
@@ -117,6 +122,12 @@ Shot parseShot(const QJsonObject& object, const QString& name)
     }
     if (object.contains("timeoutMs")) {
         shot.timeoutMs = object["timeoutMs"].toInt();
+    }
+    if (object.contains("env")) {
+        const QJsonObject env = object["env"].toObject();
+        for (auto it = env.begin(); it != env.end(); ++it) {
+            shot.env.append({ it.key().toLocal8Bit(), it.value().toString().toLocal8Bit() });
+        }
     }
 
     const QJsonArray steps = object["steps"].toArray();
@@ -416,6 +427,13 @@ bool ShootMode::prepareEnvironment()
     signal(SIGSEGV, crashHandler);
     signal(SIGABRT, crashHandler);
 #endif
+
+    // Apply the shot's own environment first, before anything reads it. A shot
+    // may deliberately override values the harness sets below (or that
+    // SystemProperties reads at startup), so this comes early.
+    for (const auto& entry : s_Shot.env) {
+        qputenv(entry.first.constData(), entry.second);
+    }
 
     s_OutDir = QString::fromLocal8Bit(qgetenv("MOONVIBE_SHOOT_OUT"));
     if (s_OutDir.isEmpty()) {

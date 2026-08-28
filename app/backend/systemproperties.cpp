@@ -48,6 +48,25 @@ SystemProperties::SystemProperties()
 {
     versionString = QString(VERSION_STR);
     hasDesktopEnvironment = WMUtils::isRunningDesktopEnvironment();
+
+    // Gaming Mode = running inside gamescope, the Steam Deck's handheld session.
+    // gamescope exports its own Wayland display and advertises itself in the
+    // XDG desktop hints, so detect it from either. MOONVIBE_GAMING (0/1) forces
+    // the answer for testing regardless of the real environment.
+    bool gamingOverride;
+    if (Utils::getEnvironmentVariableOverride("MOONVIBE_GAMING", &gamingOverride)) {
+        isGamingMode = gamingOverride;
+    }
+    else {
+        isGamingMode = !qEnvironmentVariableIsEmpty("GAMESCOPE_WAYLAND_DISPLAY") ||
+                       qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains(QLatin1String("gamescope"), Qt::CaseInsensitive) ||
+                       qEnvironmentVariable("XDG_SESSION_DESKTOP").contains(QLatin1String("gamescope"), Qt::CaseInsensitive);
+    }
+
+    // Desktop-only settings rows key off this rather than hasDesktopEnvironment,
+    // which is true under gamescope and used to leak those rows onto the Deck.
+    hasDesktopSettings = hasDesktopEnvironment && !isGamingMode;
+
     isRunningWayland = WMUtils::isRunningWayland();
     isRunningXWayland = isRunningWayland && QGuiApplication::platformName() == "xcb";
     usesMaterial3Theme = QLibraryInfo::version() >= QVersionNumber(6, 5, 0);

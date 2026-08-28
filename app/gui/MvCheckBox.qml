@@ -13,6 +13,11 @@ CheckBox {
 
     hoverEnabled: true
 
+    // An optional wrapped sublabel under the label. On a handheld there is no
+    // hover, so a control that explains itself only through a ToolTip explains
+    // itself to nobody — the description says the same thing on screen.
+    property string description: ""
+
     leftPadding: Theme.sp3
     rightPadding: Theme.sp3
     topPadding: Theme.sp2
@@ -28,6 +33,13 @@ CheckBox {
     // two lines the label is too long to be a checkbox and elides.
     implicitHeight: Math.max(Theme.rowHeight,
                              implicitContentHeight + topPadding + bottomPadding)
+
+    // The label line height, used to sit the indicator on the first line when a
+    // description makes the content taller than a single row.
+    FontMetrics {
+        id: labelMetrics
+        font: control.font
+    }
 
     // Focus and hover are deliberately the same state: the Deck has no cursor,
     // so a separate hover treatment would only ever be seen with a mouse.
@@ -49,7 +61,11 @@ CheckBox {
 
     indicator: Rectangle {
         x: control.leftPadding
-        y: control.topPadding + (control.availableHeight - height) / 2
+        // Centre in the row as before when it's just a label; with a
+        // description the content is taller, so pin the box to the first line.
+        y: control.description.length > 0
+           ? control.topPadding + Math.max(0, (labelMetrics.height - height) / 2)
+           : control.topPadding + (control.availableHeight - height) / 2
         implicitWidth: 24
         implicitHeight: 24
         radius: Theme.controlRadius
@@ -89,14 +105,38 @@ CheckBox {
         }
     }
 
-    contentItem: Text {
+    contentItem: Column {
         leftPadding: control.indicator ? control.indicator.width + control.spacing : 0
-        text: control.text
-        color: control.enabled ? Theme.textColor : Theme.textDisabled
-        font: control.font
-        wrapMode: Text.WordWrap
-        maximumLineCount: 2
-        elide: Text.ElideRight
-        verticalAlignment: Text.AlignVCenter
+        spacing: Theme.sp1
+
+        Text {
+            id: labelText
+            width: parent.width - parent.leftPadding
+            // With no description this fills the row so the single line centres
+            // vertically exactly as it did before; with one it hugs its text so
+            // the sublabel sits directly beneath.
+            height: control.description.length > 0
+                    ? implicitHeight
+                    : Math.max(implicitHeight, control.availableHeight)
+            text: control.text
+            color: control.enabled ? Theme.textColor : Theme.textDisabled
+            font: control.font
+            wrapMode: Text.WordWrap
+            maximumLineCount: 2
+            elide: Text.ElideRight
+            verticalAlignment: Text.AlignVCenter
+        }
+
+        Text {
+            id: descriptionText
+            visible: control.description.length > 0
+            width: parent.width - parent.leftPadding
+            text: control.description
+            color: Theme.textMuted
+            font.family: Theme.fontBody
+            font.pixelSize: Theme.fsLabel
+            lineHeight: 1.25
+            wrapMode: Text.WordWrap
+        }
     }
 }

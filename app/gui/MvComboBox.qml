@@ -12,7 +12,18 @@ import QtQuick.Window 2.2
 ComboBox {
     id: control
 
+    // An optional wrapped sublabel under the chip. Same reasoning as MvCheckBox:
+    // a hover-only ToolTip is invisible on a handheld, so the explanation goes
+    // on screen. The chip keeps its height; the control grows to hold the text.
+    property string description: ""
+
     implicitHeight: Theme.controlHeight
+                    + (description.length > 0 ? descriptionLabel.implicitHeight + Theme.sp1 : 0)
+
+    // Carve the description strip out of the control's content box so the chip's
+    // text and chevron stay centred in the top controlHeight rather than drifting
+    // down into the sublabel.
+    bottomPadding: description.length > 0 ? descriptionLabel.implicitHeight + Theme.sp1 : 0
 
     // rightPadding leaves the chevron its own lane. AutoResizingComboBox sizes
     // itself from leftPadding + textWidth + indicator.width + rightPadding, so
@@ -25,14 +36,34 @@ ComboBox {
     font.pixelSize: Theme.fsBody
     font.weight: Font.DemiBold
 
-    background: Rectangle {
-        radius: Theme.capsuleRadius
-        color: control.enabled ? Theme.panel : Theme.bgRaised
-        border.width: control.activeFocus ? 2 : 1
-        border.color: !control.enabled ? Theme.line
-                    : control.activeFocus ? Theme.accent
-                    : control.hovered || control.down ? Theme.lineHi
-                    : Theme.line
+    background: Item {
+        Rectangle {
+            id: chip
+            width: parent.width
+            height: Theme.controlHeight
+            radius: Theme.capsuleRadius
+            color: control.enabled ? Theme.panel : Theme.bgRaised
+            border.width: control.activeFocus ? 2 : 1
+            border.color: !control.enabled ? Theme.line
+                        : control.activeFocus ? Theme.accent
+                        : control.hovered || control.down ? Theme.lineHi
+                        : Theme.line
+        }
+
+        Text {
+            id: descriptionLabel
+            visible: control.description.length > 0
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: chip.bottom
+            anchors.topMargin: Theme.sp1
+            text: control.description
+            color: Theme.textMuted
+            font.family: Theme.fontBody
+            font.pixelSize: Theme.fsLabel
+            lineHeight: 1.25
+            wrapMode: Text.WordWrap
+        }
     }
 
     contentItem: Text {

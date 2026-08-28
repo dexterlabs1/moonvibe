@@ -8,134 +8,124 @@ import ComputerManager 1.0
 import SdlGamepadKeyNavigation 1.0
 import SystemProperties 1.0
 
-Flickable {
-    property var navHints: [
-        { b: "A", t: qsTr("Change") },
-        { b: "B", t: qsTr("Back") }
-    ]
+FocusScope {
     id: settingsPage
     objectName: qsTr("Settings")
 
     signal languageChanged()
 
-    boundsBehavior: Flickable.OvershootBounds
+    // Which zone owns focus. Drives the footer hints and, at each transition,
+    // the gamepad nav mode: the rail wants real arrow keys, the pane's controls
+    // travel by Tab, so the two cannot share one nav setting.
+    property bool paneFocused: false
 
-    contentWidth: settingsColumn1.width > settingsColumn2.width ? settingsColumn1.width : settingsColumn2.width
-    contentHeight: settingsColumn1.height > settingsColumn2.height ? settingsColumn1.height : settingsColumn2.height
+    property var navHints: paneFocused
+        ? [ { b: "A", t: qsTr("Change") }, { b: "B", t: qsTr("Back") } ]
+        : [ { b: "A", t: qsTr("Open") },   { b: "B", t: qsTr("Back") } ]
 
-    // The page scrolls between the toolbar and the footer, and a row caught at
-    // either edge used to be sliced clean in half by the bar. It now fades out
-    // into the bar instead, over this many pixels.
-    property int edgeFade: Theme.sp6
+    // The category the rail points at and the pane shows. 0..4. Two sections
+    // are folded in under an existing category and stack below it in the pane:
+    // Display carries the Advanced Settings card, Input carries the Gamepad
+    // Settings card. The SettingsSection declaration order in paneColumn is
+    // Display, Audio, Host, UI, Input, Gamepad, Advanced — a Column shows only
+    // the visible cards, in that order, so Display renders DISPLAY then
+    // ADVANCED and Input renders INPUT then GAMEPAD without reordering.
+    property int currentCategory: 0
 
-    clip: true
-
-    ScrollBar.vertical: MvScrollBar {
-        anchors {
-            left: parent.right
-            leftMargin: -width - Theme.sp1
-        }
-    }
-
-    // Declared on `data` rather than as ordinary children: a Flickable's
-    // default property puts children inside contentItem, where they would
-    // scroll away with the page. These have to stay pinned to the viewport.
-    data: [
-        Rectangle {
-            z: 1
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            height: settingsPage.edgeFade
-            color: Theme.bg
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Theme.bg }
-                GradientStop {
-                    position: 1.0
-                    color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0)
-                }
-            }
-            opacity: settingsPage.contentY > 1 ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Theme.durFast } }
-        },
-
-        Rectangle {
-            z: 1
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: settingsPage.edgeFade
-            color: Theme.bg
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.0
-                    color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0)
-                }
-                GradientStop { position: 1.0; color: Theme.bg }
-            }
-            opacity: settingsPage.contentY < settingsPage.contentHeight - settingsPage.height - 1 ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Theme.durFast } }
-        }
+    property var categoryTitles: [
+        qsTr("Display"), qsTr("Audio"), qsTr("Host"), qsTr("UI"), qsTr("Input")
     ]
 
-    function isChildOfFlickable(item) {
-        while (item) {
-            if (item.parent === contentItem) {
-                return true
-            }
+    // Room at both ends so the first and last card clear the toolbar and the
+    // footer; the pane's edge fades run over this many pixels.
+    property int edgeFade: Theme.sp6
 
-            item = item.parent
+    // Exposed so a review shot can scroll the pane (e.g. to prove the folded-in
+    // Advanced card is present and reachable below the Display card). Clamped,
+    // because a raw contentY assignment past the end scrolls the content off.
+    property alias paneContentY: pane.contentY
+    function scrollPaneToBottom() {
+        pane.contentY = Math.max(0, pane.contentHeight - pane.height)
+    }
+
+    // The first focusable control in each category. Entering the pane lands
+    // here and Tab/BackTab walk the rest — never a text field, which would
+    // raise the Steam Deck's on-screen keyboard.
+    function firstControlFor(category) {
+        switch (category) {
+        case 0: return resolutionComboBox   // Display (+ Advanced card below)
+        case 1: return audioComboBox
+        case 2: return optimizeGameSettingsCheck
+        case 3: return languageComboBox
+        case 4: return absoluteMouseCheck   // Input (+ Gamepad card below)
         }
-        return false
+        return null
     }
 
-    NumberAnimation on contentY {
-        id: autoScrollAnimation
-        duration: 100
-    }
-
-    Window.onActiveFocusItemChanged: {
-        var item = Window.activeFocusItem
+    function railTo(i) {
+        if (i < 0 || i > railRepeater.count - 1) {
+            return
+        }
+        currentCategory = i
+        var item = railRepeater.itemAt(i)
         if (item) {
-            // Ignore non-child elements like the toolbar buttons
-            if (!isChildOfFlickable(item)) {
-                return
-            }
+            item.forceActiveFocus()
+        }
+    }
 
-            // Map the focus item's position into our content item's coordinate space
-            var pos = item.mapToItem(contentItem, 0, 0)
+    function focusRail() {
+        // Real arrow keys for the rail, not Tab-nav.
+        SdlGamepadKeyNavigation.setUiNavMode(false)
+        paneFocused = false
+        var item = railRepeater.itemAt(currentCategory)
+        if (item) {
+            item.forceActiveFocus()
+        }
+    }
 
-            // Ensure some extra space is visible around the element we're
-            // scrolling to. It has to clear the edge fade, or focus lands on a
-            // row that is technically in view and visually half dissolved.
-            var scrollMargin = height > 100 ? edgeFade + Theme.sp5 : 0
+    function enterPane() {
+        // The pane's Mv* controls move focus by Tab, so switch to UI nav mode
+        // while we are inside it.
+        SdlGamepadKeyNavigation.setUiNavMode(true)
+        paneFocused = true
+        var ctrl = firstControlFor(currentCategory)
+        if (ctrl && ctrl.visible) {
+            ctrl.forceActiveFocus(Qt.TabFocus)
+        }
+    }
 
-            if (pos.y - scrollMargin < contentY) {
-                autoScrollAnimation.from = contentY
-                autoScrollAnimation.to = Math.max(pos.y - scrollMargin, 0)
-                autoScrollAnimation.start()
-            }
-            else if (pos.y + item.height + scrollMargin > contentY + height) {
-                autoScrollAnimation.from = contentY
-                autoScrollAnimation.to = Math.min(pos.y + item.height + scrollMargin - height, contentHeight - height)
-                autoScrollAnimation.start()
-            }
+    function switchCategory(delta) {
+        var n = currentCategory + delta
+        if (n < 0) {
+            n = 0
+        }
+        if (n > railRepeater.count - 1) {
+            n = railRepeater.count - 1
+        }
+        currentCategory = n
+        // Land on the rail rather than auto-focusing a control in the new pane.
+        focusRail()
+    }
+
+    // L1/R1 "switch category from anywhere" is the goal; the SDL->Qt map does
+    // not carry the shoulder buttons yet, so PageUp/PageDown stand in and light
+    // it up the day it does. Fires only when neither the rail nor a pane control
+    // consumed the key.
+    Keys.onPressed: {
+        if (event.key === Qt.Key_PageDown) {
+            switchCategory(1)
+            event.accepted = true
+        }
+        else if (event.key === Qt.Key_PageUp) {
+            switchCategory(-1)
+            event.accepted = true
         }
     }
 
     StackView.onActivated: {
-        // This enables Tab and BackTab based navigation rather than arrow keys.
-        // It is required to shift focus between controls on the settings page.
-        SdlGamepadKeyNavigation.setUiNavMode(true)
-
-        // Highlight the first item if a gamepad is connected.
-        //
-        // This is the only thing on this page that takes focus by itself, and
-        // it is deliberately a combo box. Handing initial focus to a text input
-        // is what raises the Steam Deck's on-screen keyboard over the UI.
-        if (SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
-            resolutionComboBox.forceActiveFocus(Qt.TabFocus)
-        }
+        // The rail is the entry point. Focus lands on the current category, not
+        // on a control — see enterPane().
+        focusRail()
     }
 
     StackView.onDeactivating: {
@@ -151,21 +141,233 @@ Flickable {
         StreamingPreferences.save()
     }
 
-    Column {
-        id: settingsColumn1
-        padding: Theme.sp5
-        rightPadding: Theme.sp3
-        // Room at both ends so the first and last card clear the toolbar and
-        // the footer instead of stopping flush against them.
-        topPadding: Theme.sp5 + settingsPage.edgeFade
-        bottomPadding: Theme.sp5 + settingsPage.edgeFade
-        width: settingsPage.width / 2
-        spacing: Theme.sp6
+    // ---- Category rail -----------------------------------------------------
+    Rectangle {
+        id: railBg
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: 248
+        color: Theme.bgRaised
 
+        // Divider between the rail and the content pane.
+        Rectangle {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 1
+            color: Theme.line
+        }
+
+        Column {
+            id: railColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.leftMargin: Theme.sp3
+            anchors.rightMargin: Theme.sp3
+            anchors.topMargin: Theme.sp5 + settingsPage.edgeFade
+            spacing: Theme.sp1
+
+            Repeater {
+                id: railRepeater
+                model: settingsPage.categoryTitles
+
+                delegate: Rectangle {
+                    id: railItem
+
+                    // Repeater hands the delegate `index` and `modelData`.
+                    readonly property bool selected: settingsPage.currentCategory === index
+
+                    width: railColumn.width
+                    height: Theme.rowHeight
+                    radius: Theme.capsuleRadius
+                    color: (selected || activeFocus) ? Theme.panelHi : "transparent"
+
+                    // The rail travels by arrow keys, so keep it out of the Tab
+                    // ring the pane's controls use.
+                    activeFocusOnTab: false
+
+                    // Accent left bar on the selected row, like NavigableMenuItem.
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.leftMargin: 2
+                        width: 3
+                        height: parent.height * 0.55
+                        radius: 1.5
+                        color: Theme.accent
+                        visible: railItem.selected
+                    }
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.leftMargin: Theme.sp4
+                        anchors.rightMargin: Theme.sp3
+                        text: modelData
+                        color: railItem.selected ? Theme.textColor : Theme.textMuted
+                        font.family: Theme.fontBody
+                        font.pixelSize: Theme.fsBody
+                        font.weight: railItem.selected ? Font.DemiBold : Font.Medium
+                        elide: Text.ElideRight
+                    }
+
+                    onActiveFocusChanged: {
+                        if (activeFocus) {
+                            settingsPage.currentCategory = index
+                        }
+                    }
+
+                    // Rail nav mode is off, so the D-pad arrives as real arrows.
+                    Keys.onUpPressed: settingsPage.railTo(index - 1)
+                    Keys.onDownPressed: settingsPage.railTo(index + 1)
+                    // A (Return) or Right enters the pane.
+                    Keys.onReturnPressed: settingsPage.enterPane()
+                    Keys.onEnterPressed: settingsPage.enterPane()
+                    Keys.onRightPressed: settingsPage.enterPane()
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            settingsPage.currentCategory = index
+                            railItem.forceActiveFocus()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- Content pane ------------------------------------------------------
+    Flickable {
+        id: pane
+        anchors.left: railBg.right
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+
+        boundsBehavior: Flickable.OvershootBounds
+
+        contentWidth: paneColumn.width
+        contentHeight: paneColumn.height
+
+        clip: true
+
+        ScrollBar.vertical: MvScrollBar {
+            anchors {
+                left: parent.right
+                leftMargin: -width - Theme.sp1
+            }
+        }
+
+        // B (Escape) inside the pane returns to the rail rather than leaving
+        // Settings; on the rail it is unhandled and bubbles to the StackView,
+        // which pops the page.
+        Keys.onEscapePressed: {
+            settingsPage.focusRail()
+            event.accepted = true
+        }
+
+        // Declared on `data` rather than as ordinary children: a Flickable's
+        // default property puts children inside contentItem, where they would
+        // scroll away with the page. These have to stay pinned to the viewport.
+        data: [
+            Rectangle {
+                z: 1
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: settingsPage.edgeFade
+                color: Theme.bg
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Theme.bg }
+                    GradientStop {
+                        position: 1.0
+                        color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0)
+                    }
+                }
+                opacity: pane.contentY > 1 ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Theme.durFast } }
+            },
+
+            Rectangle {
+                z: 1
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: settingsPage.edgeFade
+                color: Theme.bg
+                gradient: Gradient {
+                    GradientStop {
+                        position: 0.0
+                        color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0)
+                    }
+                    GradientStop { position: 1.0; color: Theme.bg }
+                }
+                opacity: pane.contentY < pane.contentHeight - pane.height - 1 ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Theme.durFast } }
+            }
+        ]
+
+        function isChildOfFlickable(item) {
+            while (item) {
+                if (item.parent === contentItem) {
+                    return true
+                }
+
+                item = item.parent
+            }
+            return false
+        }
+
+        NumberAnimation on contentY {
+            id: autoScrollAnimation
+            duration: 100
+        }
+
+        Window.onActiveFocusItemChanged: {
+            var item = Window.activeFocusItem
+            if (item) {
+                // Ignore anything outside the pane (the rail, the toolbar).
+                if (!isChildOfFlickable(item)) {
+                    return
+                }
+
+                // Map the focus item's position into our content item's coordinate space
+                var pos = item.mapToItem(contentItem, 0, 0)
+
+                // Ensure some extra space is visible around the element we're
+                // scrolling to. It has to clear the edge fade, or focus lands on a
+                // row that is technically in view and visually half dissolved.
+                var scrollMargin = height > 100 ? settingsPage.edgeFade + Theme.sp5 : 0
+
+                if (pos.y - scrollMargin < contentY) {
+                    autoScrollAnimation.from = contentY
+                    autoScrollAnimation.to = Math.max(pos.y - scrollMargin, 0)
+                    autoScrollAnimation.start()
+                }
+                else if (pos.y + item.height + scrollMargin > contentY + height) {
+                    autoScrollAnimation.from = contentY
+                    autoScrollAnimation.to = Math.min(pos.y + item.height + scrollMargin - height, contentHeight - height)
+                    autoScrollAnimation.start()
+                }
+            }
+        }
+
+        Column {
+            id: paneColumn
+            padding: Theme.sp5
+            topPadding: Theme.sp5 + settingsPage.edgeFade
+            bottomPadding: Theme.sp5 + settingsPage.edgeFade
+            width: pane.width
+            spacing: Theme.sp6
         SettingsSection {
             id: basicSettingsGroupBox
+            visible: settingsPage.currentCategory === 0
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            title: qsTr("Basic Settings")
+            title: qsTr("Display")
 
             Label {
                 width: parent.width
@@ -856,7 +1058,7 @@ Flickable {
                 topPadding: Theme.sp4
                 bottomPadding: Theme.sp1
                 wrapMode: Text.Wrap
-                visible: SystemProperties.hasDesktopEnvironment
+                visible: SystemProperties.hasDesktopSettings
             }
 
             AutoResizingComboBox {
@@ -922,7 +1124,7 @@ Flickable {
                 }
 
                 id: windowModeComboBox
-                visible: SystemProperties.hasDesktopEnvironment
+                visible: SystemProperties.hasDesktopSettings
                 enabled: !SystemProperties.rendererAlwaysFullScreen
                 hoverEnabled: true
                 textRole: "text"
@@ -936,39 +1138,31 @@ Flickable {
                 ToolTip.text: qsTr("Fullscreen generally provides the best performance, but borderless windowed may work better with features like macOS Spaces, Alt+Tab, screenshot tools, on-screen overlays, etc.")
             }
 
-            Row {
-                spacing: Theme.sp2
+            // Formerly a two-across Row; stacked full-width now so each can
+            // carry its explanation on screen instead of in a hover ToolTip.
+            MvCheckBox {
+                id: vsyncCheck
+                hoverEnabled: true
                 width: parent.width
                 topPadding: Theme.sp3
-
-                MvCheckBox {
-                    id: vsyncCheck
-                    hoverEnabled: true
-                    text: qsTr("V-Sync")
-                    checked: StreamingPreferences.enableVsync
-                    onCheckedChanged: {
-                        StreamingPreferences.enableVsync = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Disabling V-Sync allows sub-frame rendering latency, but it can display visible tearing")
+                text: qsTr("V-Sync")
+                description: qsTr("Disabling V-Sync allows sub-frame rendering latency, but it can display visible tearing")
+                checked: StreamingPreferences.enableVsync
+                onCheckedChanged: {
+                    StreamingPreferences.enableVsync = checked
                 }
+            }
 
-                MvCheckBox {
-                    id: framePacingCheck
-                    hoverEnabled: true
-                    text: qsTr("Frame pacing")
-                    enabled: StreamingPreferences.enableVsync
-                    checked: StreamingPreferences.enableVsync && StreamingPreferences.framePacing
-                    onCheckedChanged: {
-                        StreamingPreferences.framePacing = checked
-                    }
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Frame pacing reduces micro-stutter by delaying frames that come in too early")
+            MvCheckBox {
+                id: framePacingCheck
+                hoverEnabled: true
+                width: parent.width
+                text: qsTr("Frame pacing")
+                description: qsTr("Frame pacing reduces micro-stutter by delaying frames that come in too early")
+                enabled: StreamingPreferences.enableVsync
+                checked: StreamingPreferences.enableVsync && StreamingPreferences.framePacing
+                onCheckedChanged: {
+                    StreamingPreferences.framePacing = checked
                 }
             }
 
@@ -976,6 +1170,10 @@ Flickable {
                 id: enableHdr
                 width: parent.width
                 text: qsTr("Enable HDR")
+                description: enabled ?
+                                 qsTr("The stream will be HDR-capable, but some games may require an HDR monitor on your host PC to enable HDR mode.")
+                               :
+                                 qsTr("HDR streaming is not supported on this PC.")
 
                 enabled: SystemProperties.supportsHdr
                 checked: enabled && StreamingPreferences.enableHdr
@@ -984,19 +1182,12 @@ Flickable {
                 }
 
                 // Updating StreamingPreferences.videoCodecConfig is handled above
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: enabled ?
-                                  qsTr("The stream will be HDR-capable, but some games may require an HDR monitor on your host PC to enable HDR mode.")
-                                :
-                                  qsTr("HDR streaming is not supported on this PC.")
             }
         }
 
         SettingsSection {
             id: audioSettingsGroupBox
+            visible: settingsPage.currentCategory === 1
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             title: qsTr("Audio Settings")
 
@@ -1056,36 +1247,29 @@ Flickable {
                 id: audioPcCheck
                 width: parent.width
                 text: qsTr("Mute host PC speakers while streaming")
+                description: qsTr("You must restart any game currently in progress for this setting to take effect")
                 checked: !StreamingPreferences.playAudioOnHost
                 onCheckedChanged: {
                     StreamingPreferences.playAudioOnHost = !checked
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("You must restart any game currently in progress for this setting to take effect")
             }
 
             MvCheckBox {
                 id: muteOnFocusLossCheck
                 width: parent.width
                 text: qsTr("Mute audio stream when Moonvibe is not the active window")
-                visible: SystemProperties.hasDesktopEnvironment
+                description: qsTr("Mutes Moonvibe's audio when you Alt+Tab out of the stream or click on a different window.")
+                visible: SystemProperties.hasDesktopSettings
                 checked: StreamingPreferences.muteOnFocusLoss
                 onCheckedChanged: {
                     StreamingPreferences.muteOnFocusLoss = checked
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Mutes Moonvibe's audio when you Alt+Tab out of the stream or click on a different window.")
             }
         }
 
         SettingsSection {
             id: hostSettingsGroupBox
+            visible: settingsPage.currentCategory === 2
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             title: qsTr("Host Settings")
 
@@ -1103,15 +1287,11 @@ Flickable {
                 id: quitAppAfter
                 width: parent.width
                 text: qsTr("Quit app on host PC after ending stream")
+                description: qsTr("This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!")
                 checked: StreamingPreferences.quitAppAfter
                 onCheckedChanged: {
                     StreamingPreferences.quitAppAfter = checked
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!")
             }
 
             Label {
@@ -1161,6 +1341,7 @@ Flickable {
 
         SettingsSection {
             id: uiSettingsGroupBox
+            visible: settingsPage.currentCategory === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             title: qsTr("UI Settings")
 
@@ -1357,7 +1538,7 @@ Flickable {
                 topPadding: Theme.sp4
                 bottomPadding: Theme.sp1
                 wrapMode: Text.Wrap
-                visible: SystemProperties.hasDesktopEnvironment
+                visible: SystemProperties.hasDesktopSettings
             }
 
             AutoResizingComboBox {
@@ -1382,7 +1563,7 @@ Flickable {
                 }
 
                 id: uiDisplayModeComboBox
-                visible: SystemProperties.hasDesktopEnvironment
+                visible: SystemProperties.hasDesktopSettings
                 textRole: "text"
                 model: ListModel {
                     id: uiDisplayModeListModel
@@ -1458,21 +1639,10 @@ Flickable {
                 ToolTip.text: qsTr("Prevents the screensaver from starting or the display from going to sleep while streaming.")
             }
         }
-    }
-
-    Column {
-        id: settingsColumn2
-        padding: Theme.sp5
-        leftPadding: Theme.sp3
-        rightPadding: Theme.sp6
-        topPadding: Theme.sp5 + settingsPage.edgeFade
-        bottomPadding: Theme.sp5 + settingsPage.edgeFade
-        anchors.left: settingsColumn1.right
-        width: settingsPage.width / 2
-        spacing: Theme.sp6
 
         SettingsSection {
             id: inputSettingsGroupBox
+            visible: settingsPage.currentCategory === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             title: qsTr("Input Settings")
 
@@ -1481,21 +1651,20 @@ Flickable {
                 hoverEnabled: true
                 width: parent.width
                 text: qsTr("Optimize mouse for remote desktop instead of games")
+                description: qsTr("This enables seamless mouse control without capturing the client's mouse cursor. It is ideal for remote desktop usage but will not work in most games.") + " " +
+                             qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+M.") + "\n\n" +
+                             qsTr("NOTE: Due to a bug in GeForce Experience, this option may not work properly if your host PC has multiple monitors.")
                 checked: StreamingPreferences.absoluteMouseMode
                 onCheckedChanged: {
                     StreamingPreferences.absoluteMouseMode = checked
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 10000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("This enables seamless mouse control without capturing the client's mouse cursor. It is ideal for remote desktop usage but will not work in most games.") + " " +
-                              qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+M.") + "\n\n" +
-                              qsTr("NOTE: Due to a bug in GeForce Experience, this option may not work properly if your host PC has multiple monitors.")
             }
 
             Row {
                 id: captureSysKeysRow
+                // Desktop-only: capturing system shortcuts is meaningless in
+                // Gaming Mode, and gamescope reports a desktop environment.
+                visible: SystemProperties.hasDesktopSettings
                 spacing: Theme.sp3
                 width: parent.width
 
@@ -1579,20 +1748,18 @@ Flickable {
                 hoverEnabled: true
                 width: parent.width
                 text: qsTr("Use touchscreen as a virtual trackpad")
+                description: qsTr("When checked, the touchscreen acts like a trackpad. When unchecked, the touchscreen will directly control the mouse pointer.")
                 checked: !StreamingPreferences.absoluteTouchMode
                 onCheckedChanged: {
                     StreamingPreferences.absoluteTouchMode = !checked
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("When checked, the touchscreen acts like a trackpad. When unchecked, the touchscreen will directly control the mouse pointer.")
             }
 
             MvCheckBox {
                 id: swapMouseButtonsCheck
                 hoverEnabled: true
+                // Desktop-only: a physical mouse's buttons, not the Deck's.
+                visible: SystemProperties.hasDesktopSettings
                 width: parent.width
                 text: qsTr("Swap left and right mouse buttons")
                 checked: StreamingPreferences.swapMouseButtons
@@ -1604,6 +1771,8 @@ Flickable {
             MvCheckBox {
                 id: reverseScrollButtonsCheck
                 hoverEnabled: true
+                // Desktop-only: a physical mouse's scroll wheel.
+                visible: SystemProperties.hasDesktopSettings
                 width: parent.width
                 text: qsTr("Reverse mouse scrolling direction")
                 checked: StreamingPreferences.reverseScrollDirection
@@ -1615,6 +1784,8 @@ Flickable {
 
         SettingsSection {
             id: gamepadSettingsGroupBox
+            // Folded into Input: stacks below the INPUT card.
+            visible: settingsPage.currentCategory === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             title: qsTr("Gamepad Settings")
 
@@ -1622,31 +1793,23 @@ Flickable {
                 id: swapFaceButtonsCheck
                 width: parent.width
                 text: qsTr("Swap A/B and X/Y gamepad buttons")
+                description: qsTr("This switches gamepads into a Nintendo-style button layout")
                 checked: StreamingPreferences.swapFaceButtons
                 onCheckedChanged: {
                     StreamingPreferences.swapFaceButtons = checked
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("This switches gamepads into a Nintendo-style button layout")
             }
 
             MvCheckBox {
                 id: singleControllerCheck
                 width: parent.width
                 text: qsTr("Force gamepad #1 always connected")
+                description: qsTr("Forces a single gamepad to always stay connected to the host, even if no gamepads are actually connected to this PC.") + " " +
+                             qsTr("Only enable this option when streaming a game that doesn't support gamepads being connected after startup.")
                 checked: !StreamingPreferences.multiController
                 onCheckedChanged: {
                     StreamingPreferences.multiController = !checked
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Forces a single gamepad to always stay connected to the host, even if no gamepads are actually connected to this PC.") + " " +
-                              qsTr("Only enable this option when streaming a game that doesn't support gamepads being connected after startup.")
             }
 
             MvCheckBox {
@@ -1664,7 +1827,7 @@ Flickable {
                 id: backgroundGamepadCheck
                 width: parent.width
                 text: qsTr("Process gamepad input when Moonvibe is in the background")
-                visible: SystemProperties.hasDesktopEnvironment
+                visible: SystemProperties.hasDesktopSettings
                 checked: StreamingPreferences.backgroundGamepad
                 onCheckedChanged: {
                     StreamingPreferences.backgroundGamepad = checked
@@ -1679,6 +1842,8 @@ Flickable {
 
         SettingsSection {
             id: advancedSettingsGroupBox
+            // Folded into Display: stacks below the DISPLAY card.
+            visible: settingsPage.currentCategory === 0
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             title: qsTr("Advanced Settings")
 
@@ -1863,6 +2028,10 @@ Flickable {
                 id: enableYUV444
                 width: parent.width
                 text: qsTr("Enable YUV 4:4:4")
+                description: enabled ?
+                                 qsTr("Good for streaming desktop and text-heavy games, but not recommended for fast-paced games.")
+                               :
+                                 qsTr("YUV 4:4:4 is not supported on this PC.")
 
                 checked: StreamingPreferences.enableYUV444
                 onCheckedChanged: {
@@ -1878,20 +2047,13 @@ Flickable {
                         }
                     }
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: enabled ?
-                                  qsTr("Good for streaming desktop and text-heavy games, but not recommended for fast-paced games.")
-                                :
-                                  qsTr("YUV 4:4:4 is not supported on this PC.")
             }
 
             MvCheckBox {
                 id: unlockBitrate
                 width: parent.width
                 text: qsTr("Unlock bitrate limit (Experimental)")
+                description: qsTr("This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.")
 
                 checked: StreamingPreferences.unlockBitrate
                 onCheckedChanged: {
@@ -1899,11 +2061,6 @@ Flickable {
                     StreamingPreferences.bitrateKbps = Math.min(StreamingPreferences.bitrateKbps, slider.to)
                     slider.value = StreamingPreferences.bitrateKbps
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.")
             }
 
             MvCheckBox {
@@ -1940,18 +2097,15 @@ Flickable {
                 id: showPerformanceOverlay
                 width: parent.width
                 text: qsTr("Show performance stats while streaming")
+                description: qsTr("Display real-time stream performance information while streaming.") + "\n\n" +
+                             qsTr("You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.") + "\n\n" +
+                             qsTr("The performance overlay is not supported on Steam Link or Raspberry Pi.")
                 checked: StreamingPreferences.showPerformanceOverlay
                 onCheckedChanged: {
                     StreamingPreferences.showPerformanceOverlay = checked
                 }
-
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Display real-time stream performance information while streaming.") + "\n\n" +
-                              qsTr("You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.") + "\n\n" +
-                              qsTr("The performance overlay is not supported on Steam Link or Raspberry Pi.")
             }
+        }
         }
     }
 }
