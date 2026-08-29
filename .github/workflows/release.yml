@@ -47,7 +47,7 @@ jobs:
             ## Install on a Steam Deck
 
             1. **Switch to Desktop Mode** (Steam button → Power → Switch to Desktop).
-            2. Download **`moonvibe.flatpak`** from the Assets below (log into GitHub in the browser while this repo is private).
+            2. Download **`moonvibe.flatpak`** from the Assets below.
             3. Open **Konsole** and run:
                ```
                flatpak install --user ~/Downloads/moonvibe.flatpak
@@ -71,7 +71,6 @@ jobs:
 
             ---
             _Moonvibe is a Steam Deck-focused fork of
-            [moonlight-qt](https://github.com/moonlight-stream/moonlight-qt) (GPL-3.0).
-            This is a pre-alpha build: stock Moonlight feature set with Moonvibe branding
-            and Deck-first packaging; the Deck-first UI, in-stream drawer, and Vibepollo
-            ABR integration are in development._
+            [moonlight-qt](https://github.com/moonlight-stream/moonlight-qt) (GPL-3.0):
+            a dark, controller-first UI shell over Moonlight's streaming pipeline. The
+            in-stream drawer and Vibepollo ABR integration are still in development._

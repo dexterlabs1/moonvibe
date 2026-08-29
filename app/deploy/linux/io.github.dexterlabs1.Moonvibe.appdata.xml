@@ -39,6 +39,20 @@
 	</branding>
 
 	<releases>
+		<release version="0.7.0" date="2026-08-29">
+			<description>
+				<p>The Settings screen, rebuilt for the Deck, and controller navigation that keeps up with you:</p>
+				<ul>
+					<li>Settings is now a category rail with one section at a time, not two columns of everything</li>
+					<li>Controls sit flat on the page instead of inside nested boxes</li>
+					<li>Save, apply and reset stream-quality profiles from a bar at the top</li>
+					<li>Every setting explains itself on screen, no hovering required</li>
+					<li>Desktop-only options are hidden in Game Mode</li>
+					<li>Hold a direction on the d-pad or stick to scroll continuously</li>
+					<li>The app no longer quits itself on launch; several on-screen values that were faked now reflect the real state</li>
+				</ul>
+			</description>
+		</release>
 		<release version="0.6.0" date="2026-08-20">
 			<description>
 				<ul>
