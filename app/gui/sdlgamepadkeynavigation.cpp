@@ -6,7 +6,17 @@
 
 #include "settings/mappingmanager.h"
 
-#define AXIS_NAVIGATION_REPEAT_DELAY 150
+// Held-direction auto-repeat. The first move fires the instant a direction is
+// engaged; the direction then has to be held past the initial delay before it
+// begins repeating, and the gap between repeats ramps from SLOW down to FAST
+// the longer it is held, so a list scrolls off gently and then quickly.
+#define NAV_REPEAT_INITIAL_DELAY 350
+#define NAV_REPEAT_SLOW_INTERVAL 110
+#define NAV_REPEAT_FAST_INTERVAL 45
+#define NAV_REPEAT_ACCEL_TIME    1200
+
+// How far the left stick must be pushed before it counts as a held direction.
+#define STICK_NAV_THRESHOLD 24000
 
 SdlGamepadKeyNavigation::SdlGamepadKeyNavigation(StreamingPreferences* prefs)
     : m_Prefs(prefs),
@@ -14,7 +24,10 @@ SdlGamepadKeyNavigation::SdlGamepadKeyNavigation(StreamingPreferences* prefs)
       m_UiNavMode(false),
       m_FirstPoll(false),
       m_HasFocus(false),
-      m_LastAxisNavigationEventTime(0)
+      m_HeldDpadDir(NavNone),
+      m_ActiveNavDir(NavNone),
+      m_NavHoldStartTime(0),
+      m_LastNavRepeatTime(0)
 {
     m_PollingTimer = new QTimer(this);
     connect(m_PollingTimer, &QTimer::timeout, this, &SdlGamepadKeyNavigation::onPollingTimerFired);
@@ -114,6 +127,9 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
         SDL_FlushEvent(SDL_CONTROLLERBUTTONDOWN);
         SDL_FlushEvent(SDL_CONTROLLERBUTTONUP);
         SDL_FlushEvent(SDL_QUIT);
+        // Drop any held-direction state carried over from a previous enable.
+        m_HeldDpadDir = NavNone;
+        m_ActiveNavDir = NavNone;
         m_FirstPoll = false;
     }
 
@@ -161,28 +177,25 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             }
 
             switch (event.cbutton.button) {
+            // The four directions are not sent from here. They register a held
+            // direction that the auto-repeat block below drives, so holding the
+            // d-pad scrolls continuously instead of moving one step per press.
+            // On release, only clear the direction if it is still the held one.
             case SDL_CONTROLLER_BUTTON_DPAD_UP:
-                if (m_UiNavMode) {
-                    // Back-tab
-                    sendKey(type, Qt::Key_Tab, Qt::ShiftModifier);
-                }
-                else {
-                    sendKey(type, Qt::Key_Up);
-                }
+                m_HeldDpadDir = (type == QEvent::Type::KeyPress) ? NavUp
+                              : (m_HeldDpadDir == NavUp ? NavNone : m_HeldDpadDir);
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-                if (m_UiNavMode) {
-                    sendKey(type, Qt::Key_Tab);
-                }
-                else {
-                    sendKey(type, Qt::Key_Down);
-                }
+                m_HeldDpadDir = (type == QEvent::Type::KeyPress) ? NavDown
+                              : (m_HeldDpadDir == NavDown ? NavNone : m_HeldDpadDir);
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
-                sendKey(type, Qt::Key_Left);
+                m_HeldDpadDir = (type == QEvent::Type::KeyPress) ? NavLeft
+                              : (m_HeldDpadDir == NavLeft ? NavNone : m_HeldDpadDir);
                 break;
             case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
-                sendKey(type, Qt::Key_Right);
+                m_HeldDpadDir = (type == QEvent::Type::KeyPress) ? NavRight
+                              : (m_HeldDpadDir == NavRight ? NavNone : m_HeldDpadDir);
                 break;
             case SDL_CONTROLLER_BUTTON_A:
                 if (m_UiNavMode) {
@@ -229,48 +242,86 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
         }
     }
 
-    // Handle analog sticks by polling
+    // The left stick, polled, is the other source of a held direction.
+    NavDir stickDir = NavNone;
     for (auto gc : std::as_const(m_Gamepads)) {
         short leftX = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_LEFTX);
         short leftY = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_LEFTY);
-        if (SDL_GetTicks() - m_LastAxisNavigationEventTime < AXIS_NAVIGATION_REPEAT_DELAY) {
-            // Do nothing
-        }
-        else if (leftY < -30000) {
-            if (m_UiNavMode) {
-                // Back-tab
-                sendKey(QEvent::Type::KeyPress, Qt::Key_Tab, Qt::ShiftModifier);
-                sendKey(QEvent::Type::KeyRelease, Qt::Key_Tab, Qt::ShiftModifier);
-            }
-            else {
-                sendKey(QEvent::Type::KeyPress, Qt::Key_Up);
-                sendKey(QEvent::Type::KeyRelease, Qt::Key_Up);
-            }
+        if (leftY < -STICK_NAV_THRESHOLD) { stickDir = NavUp; break; }
+        else if (leftY > STICK_NAV_THRESHOLD) { stickDir = NavDown; break; }
+        else if (leftX < -STICK_NAV_THRESHOLD) { stickDir = NavLeft; break; }
+        else if (leftX > STICK_NAV_THRESHOLD) { stickDir = NavRight; break; }
+    }
 
-            m_LastAxisNavigationEventTime = SDL_GetTicks();
-        }
-        else if (leftY > 30000) {
-            if (m_UiNavMode) {
-                sendKey(QEvent::Type::KeyPress, Qt::Key_Tab);
-                sendKey(QEvent::Type::KeyRelease, Qt::Key_Tab);
-            }
-            else {
-                sendKey(QEvent::Type::KeyPress, Qt::Key_Down);
-                sendKey(QEvent::Type::KeyRelease, Qt::Key_Down);
-            }
+    // The d-pad wins over the stick when both are engaged.
+    NavDir dir = (m_HeldDpadDir != NavNone) ? m_HeldDpadDir : stickDir;
+    Uint32 now = SDL_GetTicks();
 
-            m_LastAxisNavigationEventTime = SDL_GetTicks();
+    if (dir == NavNone) {
+        // Nothing held -- next engage starts fresh.
+        m_ActiveNavDir = NavNone;
+    }
+    else if (dir != m_ActiveNavDir) {
+        // Newly engaged, or switched direction: move once immediately, then
+        // wait out the initial delay before auto-repeat kicks in.
+        emitNavDirection(dir);
+        m_ActiveNavDir = dir;
+        m_NavHoldStartTime = now;
+        m_LastNavRepeatTime = now;
+    }
+    else {
+        // Same direction still held. Repeat once the initial delay has passed,
+        // at an interval that accelerates from SLOW toward FAST.
+        Uint32 heldFor = now - m_NavHoldStartTime;
+        if (heldFor >= NAV_REPEAT_INITIAL_DELAY) {
+            Uint32 repeatFor = heldFor - NAV_REPEAT_INITIAL_DELAY;
+            Uint32 interval = (repeatFor >= NAV_REPEAT_ACCEL_TIME)
+                    ? NAV_REPEAT_FAST_INTERVAL
+                    : NAV_REPEAT_SLOW_INTERVAL -
+                          (NAV_REPEAT_SLOW_INTERVAL - NAV_REPEAT_FAST_INTERVAL)
+                          * repeatFor / NAV_REPEAT_ACCEL_TIME;
+            if (now - m_LastNavRepeatTime >= interval) {
+                emitNavDirection(dir);
+                m_LastNavRepeatTime = now;
+            }
         }
-        else if (leftX < -30000) {
-            sendKey(QEvent::Type::KeyPress, Qt::Key_Left);
-            sendKey(QEvent::Type::KeyRelease, Qt::Key_Left);
-            m_LastAxisNavigationEventTime = SDL_GetTicks();
+    }
+}
+
+void SdlGamepadKeyNavigation::emitNavDirection(NavDir dir)
+{
+    switch (dir) {
+    case NavUp:
+        if (m_UiNavMode) {
+            // Back-tab
+            sendKey(QEvent::Type::KeyPress, Qt::Key_Tab, Qt::ShiftModifier);
+            sendKey(QEvent::Type::KeyRelease, Qt::Key_Tab, Qt::ShiftModifier);
         }
-        else if (leftX > 30000) {
-            sendKey(QEvent::Type::KeyPress, Qt::Key_Right);
-            sendKey(QEvent::Type::KeyRelease, Qt::Key_Right);
-            m_LastAxisNavigationEventTime = SDL_GetTicks();
+        else {
+            sendKey(QEvent::Type::KeyPress, Qt::Key_Up);
+            sendKey(QEvent::Type::KeyRelease, Qt::Key_Up);
         }
+        break;
+    case NavDown:
+        if (m_UiNavMode) {
+            sendKey(QEvent::Type::KeyPress, Qt::Key_Tab);
+            sendKey(QEvent::Type::KeyRelease, Qt::Key_Tab);
+        }
+        else {
+            sendKey(QEvent::Type::KeyPress, Qt::Key_Down);
+            sendKey(QEvent::Type::KeyRelease, Qt::Key_Down);
+        }
+        break;
+    case NavLeft:
+        sendKey(QEvent::Type::KeyPress, Qt::Key_Left);
+        sendKey(QEvent::Type::KeyRelease, Qt::Key_Left);
+        break;
+    case NavRight:
+        sendKey(QEvent::Type::KeyPress, Qt::Key_Right);
+        sendKey(QEvent::Type::KeyRelease, Qt::Key_Right);
+        break;
+    default:
+        break;
     }
 }
 
